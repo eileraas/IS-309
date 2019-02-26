@@ -1,1 +1,70 @@
-heh
+create or replace procedure CREATE_LOCATION_SP (
+  p_location_id		    OUT	INTEGER,        -- an output parameter
+  p_location_country	IN	VARCHAR,        -- must not be NULL
+  p_location_postal_code IN	VARCHAR,        -- must not be NULL
+  p_location_street1	IN	VARCHAR,
+  p_location_street2	IN	VARCHAR,
+  p_location_city	    IN	VARCHAR,
+  p_location_administrative_region IN VARCHAR
+)
+--If the country, postalcode, and 
+--street portion of the address match, then a new location is not added. The 
+--identifier for the location created or found is returned as an output parameter.
+
+
+IS
+ex_Error EXCEPTION;
+lv_errormsg_txt VARCHAR(100);
+
+BEGIN
+
+IF p_location_country is NULL THEN
+   RAISE ex_Error;
+    END IF;
+
+	INSERT INTO vm_location (
+    location_id,
+    location_country,
+    location_postal_code,
+    location_street_1,
+    location_street_2,
+    location_city,
+    location_administrative_region
+    
+) VALUES (
+    inc_seq.nextval,
+    p_location_country,
+    p_location_postal_code,
+    p_location_street1,
+    p_location_street2,
+    p_location_city,
+    p_location_administrative_region    
+);
+
+COMMIT;
+
+
+EXCEPTION
+ WHEN ex_Error THEN
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x).  No location added.');
+    DBMS_OUTPUT.PUT_LINE(' Error meaning: A mandatory value is missing.  Here, y = ''CREATE_LOCATION_SP''');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
+    inserted into the VM_LOCATION table.  The p_location_id value returned is 
+    NULL.');
+    ROLLBACK;
+ WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+    ROLLBACK;
+END;
+
+/* RETURNS:  
+a new or existing location_id, using the p_location_id output parameter
+
+ERROR MESSAGES:
+  Error text:  "Missing mandatory value for parameter (x).  No location added." 
+  Error meaning: A mandatory value is missing.  Here, y = 'CREATE_LOCATION_SP'
+  Error effect: Because a mandatory value is not provided, no data are 
+    inserted into the VM_LOCATION table.  The p_location_id value returned is 
+    NULL. */
