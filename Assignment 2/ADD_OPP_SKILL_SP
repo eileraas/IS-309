@@ -1,0 +1,45 @@
+create or replace procedure ADD_OPP_SKILL_SP (
+    p_skill_name    IN  VARCHAR,    -- NOT NULL
+    p_opp_id        IN  INTEGER    -- NOT NULL
+)
+IS
+ex_Error EXCEPTION;
+lv_errormsg_txt VARCHAR(100);
+BEGIN
+
+IF p_skill_name is NULL THEN
+    RAISE ex_Error;
+    END IF;
+
+IF p_opp_id  is NULL THEN
+    RAISE ex_Error;
+    END IF;
+
+INSERT INTO vm_oppskill (skill_name, opportunity_id) 
+VALUES (p_skill_name, p_opp_id   
+);
+
+COMMIT;
+
+ EXCEPTION
+ WHEN ex_Error THEN
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x) in context (y)"');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a skill name and an opportunity id are required, 
+        Missing either one causes this error.  Here, y = "ADD_OPP_SKILL_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
+            inserted into the VM_OPPSKILL table.  ');
+    ROLLBACK;
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value for parameter (x) in context (y)."');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Either the p_skill_name value is not found in VM_SKILL,
+    or the p_opp_id value is not found in the VM_OPPORTUNITY  table. 
+    Here, y = "ADD_OPP_SKILL_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the
+            VM_OPPSKILL table.');  
+    ROLLBACK;
+ WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+    ROLLBACK;
+END;
