@@ -1,0 +1,73 @@
+create or replace procedure CREATE_PERSON_SP (
+    p_person_ID             OUT INTEGER, -- an output parameter
+    p_person_email          IN VARCHAR,  -- Must be unique, not null
+    P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_surname        IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_phone          IN VARCHAR
+)
+IS
+p_count NUMBER (10);
+ex_Error EXCEPTION;
+lv_errormsg_txt VARCHAR(100);
+BEGIN
+
+IF p_person_email is NULL THEN
+   RAISE ex_Error;
+    END IF;
+
+select count (*)
+into p_count 
+from VM_PERSON
+where p_person_email = person_email;
+    
+if p_count > 0 
+then 
+lv_errormsg_txt := 'The email already exists, try another one ';
+raise ex_error;
+elsif p_person_email is null then
+lv_errormsg_txt := 'the email  must not be null.';
+end if;
+
+    INSERT INTO vm_person (
+    person_id,
+    person_email,
+    person_given_name,
+    person_surname,
+    person_phone ) 
+    VALUES (
+    inc_seq.nextval,
+    p_person_email,
+    P_person_given_name,
+    p_person_surname,
+    p_person_phone
+);
+ COMMIT;
+ 
+Exception
+    when ex_error then
+    dbms_output.put_line(lv_errormsg_txt);
+    rollback;
+    when others then
+    dbms_output.put_line(' the error code is: ' || sqlcode);
+    dbms_output.put_line(' the error msg is: ' || sqlerrm);
+    rollback;
+
+   /*EXCEPTION
+ WHEN ex_Error THEN
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x)  in context (y).  No person added."');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory value is missing.  Here, y = "CREATE_PERSON_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
+            inserted into the VM_PERSON table.  The p_person_id value returned is NULL.  ');
+    ROLLBACK;
+  WHEN DUP_VAL_ON_INDEX THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Email address (x) is already used."');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because the email must be unique, no data are inserted into the 
+            VM_PERSON data.  The p_person_ID value returned is the one that corresponds to the person already in the table with this email.');
+    ROLLBACK;
+ WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+    ROLLBACK;*/
+    
+END;
