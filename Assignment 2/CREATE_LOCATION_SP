@@ -13,11 +13,9 @@ create or replace procedure CREATE_LOCATION_SP (
 IS
 ex_error EXCEPTION;
 lv_errormsg_txt VARCHAR(100);
-lv_location_num VM_LOCATION.LOCATION_ID%TYPE;
 
 BEGIN
 
-lv_location_num := inc_seq.nextval;
 
 IF p_location_country is NULL THEN
    RAISE ex_error;
@@ -33,7 +31,7 @@ IF p_location_country is NULL THEN
     location_administrative_region
     
 ) VALUES (
-    lv_location_num.nextval,
+    inc_seq.nextval,
     p_location_country,
     p_location_postal_code,
     p_location_street1,
