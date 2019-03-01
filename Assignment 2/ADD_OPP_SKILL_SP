@@ -3,9 +3,16 @@ create or replace procedure ADD_OPP_SKILL_SP (
     p_opp_id        IN  INTEGER    -- NOT NULL
 )
 IS
+lv_opp_id_num     VM_OPPORTUNITY.OPPORTUNITY_ID%TYPE;
+lv_skill_name_txt    VM_SKILL.SKILL_NAME%TYPE;
 ex_Error EXCEPTION;
 lv_errormsg_txt VARCHAR(100);
 BEGIN
+
+SELECT OPPORTUNITY_ID, SKILL_NAME
+   INTO lv_opp_id_num, lv_skill_name_txt
+   FROM VM_OPPORTUNITY, VM_SKILL
+   WHERE OPPORTUNITY_ID = p_opp_id AND SKILL_NAME = p_skill_name;
 
 IF p_skill_name is NULL THEN
     RAISE ex_Error;
@@ -18,6 +25,7 @@ IF p_opp_id  is NULL THEN
 INSERT INTO vm_oppskill (skill_name, opportunity_id) 
 VALUES (p_skill_name, p_opp_id   
 );
+
 
 COMMIT;
 
