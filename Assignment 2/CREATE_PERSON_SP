@@ -5,11 +5,14 @@ create or replace procedure CREATE_PERSON_SP (
     p_person_surname        IN VARCHAR,  -- NOT NULL, if email is unique (new)
     p_person_phone          IN VARCHAR
 )
+
 IS
 email_check NUMBER;
 ex_Error EXCEPTION;
 ex_Error_null EXCEPTION;
 lv_errormsg_txt VARCHAR(100);
+lv_errormsg_null_txt VARCHAR(300);
+
 BEGIN
 
 SELECT COUNT (*)
@@ -24,7 +27,7 @@ INTO p_person_ID
 FROM VM_PERSON
 WHERE p_person_email = PERSON_EMAIL;
 
-lv_errormsg_txt := 'Email address' || p_person_email || ' is used by Person id ' || p_person_ID;
+lv_errormsg_txt := 'Email address ' || p_person_email || ' is used by Person id ' || p_person_ID;
 RAISE ex_Error;
 
 ELSIF email_check = 0 THEN
@@ -33,9 +36,9 @@ p_person_ID := PERSON_ID_SEQ.nextval;
 END IF;
 
 IF p_person_email is NULL THEN
-   RAISE ex_Error_null;
-    END IF;
-
+lv_errormsg_null_txt := 'Because a mandatory value is not provided, no data are inserted into person id'|| p_person_ID || ', No person added.';
+RAISE ex_Error_null;
+END IF;
 
     INSERT INTO vm_person (
     person_id,
@@ -50,26 +53,20 @@ IF p_person_email is NULL THEN
     p_person_surname,
     p_person_phone
 );
-
- COMMIT;
+  COMMIT;
  
   EXCEPTION
   When ex_Error THEN
   DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
   ROLLBACK;
+  
+  WHEN ex_Error_null THEN
+  DBMS_OUTPUT.PUT_LINE (lv_errormsg_null_txt);
     
-     WHEN ex_Error_null THEN
-    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x)  in context (y).  No person added."');
-    DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory value is missing.  Here, y = "CREATE_PERSON_SP" ');
-    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
-            inserted into the VM_PERSON table.  The p_person_id value returned is NULL.  ');
-            
-    ROLLBACK;
-     WHEN OTHERS THEN
-    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
-    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
-    ROLLBACK;  
+  WHEN OTHERS THEN
+  DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+  DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+  ROLLBACK;  
     
-    END;
-
+  END;
 
