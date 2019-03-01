@@ -1,47 +1,50 @@
 create or replace procedure ADD_MEMBER_SKILL_SP (
-    p_person_id     IN  INTEGER,    -- NOT NULL
-    p_skill_name    IN  VARCHAR -- NOT NULL
+    p_person_id     IN  INTEGER,
+    p_skill_name    IN  VARCHAR 
 )
 IS
-ex_Error EXCEPTION;
-lv_errormsg_txt VARCHAR(100);
+    lv_person_id_num     VM_MEMBER.PERSON_ID%TYPE;
+    lv_skill_name_txt    VM_SKILL.SKILL_NAME%TYPE;
+    ex_isnull_id         EXCEPTION;
+   
 BEGIN
-    IF p_person_id is NULL THEN
-    RAISE ex_Error;
+   SELECT PERSON_ID, SKILL_NAME
+   INTO lv_person_id_num, lv_skill_name_txt
+   FROM VM_MEMBER, VM_SKILL
+   WHERE person_ID = p_person_id AND SKILL_NAME = p_skill_name;
+
+    IF p_person_ID is NULL THEN
+    RAISE ex_isnull_id;
     END IF;
 
-IF p_skill_name  is NULL THEN
-    RAISE ex_Error;
+    IF p_skill_name is NULL THEN
+    RAISE ex_isnull_id;
     END IF;
 
-
-INSERT INTO vm_memskill (person_id, skill_name) VALUES (
+   INSERT INTO vm_memskill (
+    person_id,
+    skill_name
+) VALUES (
     p_person_id,
     p_skill_name
 );
 
-COMMIT;
+commit;
 
- EXCEPTION
- WHEN ex_Error THEN
-    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+EXCEPTION
+  WHEN ex_isnull_id THEN
     DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x) in context (y)"');
-    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a skill name and an members person id are required, 
-        Missing either one causes this error.  Here, y = "ADD_MEMBER_SKILL_SP".');
-    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
-            inserted into the VM_MEMSKILL table.');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a cause name and an organization id are required, Missing either one causes this error.  Here, y = "ADD_MEMBER_SKILL_SP". ');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are inserted into the VM_MEMSKILL table.');
     ROLLBACK;
   WHEN NO_DATA_FOUND THEN
     DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value for parameter (x) in context (y)."');
-    DBMS_OUTPUT.PUT_LINE('Error effect:  Either the p_skill_name value is not found in VM_SKILL,
-    or the p_person_id value is not found in the VM_MEMBER  table. 
-    Here, y = "ADD_MEMBER_SKILL_SP"');
-    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the
-            VM_MEMSKILL table.');  
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Either the p_skill_name value is not found in VM_SKILL, or the p_person_id value is not found in the VM_MEMBER table. Here, y = "ADD_MEMBER_SKILL_SP".');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the VM_MEMSKILL table.');
     ROLLBACK;
- WHEN OTHERS THEN
-    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
-    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
-    ROLLBACK;
-    
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('An error occured. ');
+    DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE('Error message: ' ||SQLERRM);
+    ROLLBACK;  
 END;
