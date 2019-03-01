@@ -8,20 +8,43 @@ create or replace procedure CREATE_LOCATION_SP (
   p_location_administrative_region IN VARCHAR
 )
 
-
-
 IS
+/*
+location_postal_code_check NUMBER;
+location_country_check NUMBER;
+location_street1_check NUMBER;*/
 ex_error EXCEPTION;
 lv_errormsg_txt VARCHAR(100);
 
 BEGIN
 
+/*SELECT COUNT (*)
+INTO location_postal_code_check, location_country_check, location_street1_check
+FROM VM_LOCATION
+WHERE p_location_postal_code = LOCATION_POSTAL_CODE AND p_location_country = LOCATION_COUNTRY 
+AND p_location_street1 = LOCATION_STREET1;
+
+IF location_postal_code_check, location_country_check, ELSIF location_street1_check > 0 THEN
+
+SELECT LOCATION_ID
+INTO p_location_ID
+FROM VM_LOCATION
+WHERE p_location_postal_code = LOCATION_POSTAL_CODE AND p_location_country = LOCATION_COUNTRY 
+AND p_location_street1 = LOCATION_STREET1;
+
+lv_errormsg_txt := 'this location already exists ' || p_loaction_ID|| ;
+RAISE ex_Error;
+
+ELSIF location_postal_code_check AND location_country_check AND location_street1_check = 0 THEN
+p_location_ID := LOCATION_ID_SQ.nextval;
+
+END IF;*/
 
 IF p_location_country is NULL THEN
    RAISE ex_error;
     END IF;
 
-	INSERT INTO vm_location (
+	INSERT INTO VM_LOCATION (
     location_id,
     location_country,
     location_postal_code,
@@ -42,7 +65,18 @@ IF p_location_country is NULL THEN
 
 COMMIT;
 
-
+ /*EXCEPTION
+  When ex_Error THEN
+  DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+  ROLLBACK;
+      
+   WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+    ROLLBACK;  
+    
+    END;*/
+    
 EXCEPTION
  WHEN ex_error THEN
     DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
