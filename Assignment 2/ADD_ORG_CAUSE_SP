@@ -1,0 +1,50 @@
+create or replace procedure ADD_ORG_CAUSE_SP (
+    p_org_id            IN  INTEGER,    -- NOT NULL
+    p_cause_name        IN  VARCHAR -- NOT NULL
+)
+IS
+    lv_org_id_num     VM_ORGANIZATION.ORGANIZATION_ID%TYPE;
+    lv_cause_name_txt    VM_CAUSE.CAUSE_NAME%TYPE;
+    ex_isnull_id         EXCEPTION;
+       
+BEGIN
+   SELECT ORGANIZATION_ID, CAUSE_NAME
+   INTO lv_org_id_num, lv_cause_name_txt
+   FROM VM_ORGANIZATION, VM_CAUSE
+   WHERE ORGANIZATION_ID = p_org_id AND CAUSE_NAME = p_cause_name;
+   
+    IF p_org_id is NULL THEN
+    RAISE ex_isnull_id;
+    END IF;
+
+    IF p_cause_name is NULL THEN
+    RAISE ex_isnull_id;
+    END IF;
+
+   INSERT INTO vm_orgcause (
+    organization_id,
+    cause_name
+) VALUES (
+    p_org_id,
+    p_cause_name
+);
+
+commit; 
+
+EXCEPTION
+  WHEN ex_isnull_id THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x) in context (y)"');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a cause name and an organization id are required, Missing either one causes this error.  Here, y = "ADD_ORG_CAUSE_SP". ');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are inserted into the VM_ORGCAUSE table.');
+    ROLLBACK;
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value for parameter (x) in context (y)."');
+    DBMS_OUTPUT.PUT_LINE('Error meaning.  Either the p_cause_name value is not found in VM_ORGCAUSE,or the p_org_id value is not found in the VM_ORGANIZATION table. Here, y = "ADD_ORG_CAUSE_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the VM_ORGCAUSE table.');
+    ROLLBACK;
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('An error occured. ');
+    DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE('Error message: ' ||SQLERRM);
+    ROLLBACK;  
+END;
