@@ -6,68 +6,70 @@ create or replace procedure CREATE_PERSON_SP (
     p_person_phone          IN VARCHAR
 )
 IS
-p_count NUMBER (10);
+email_check NUMBER;
 ex_Error EXCEPTION;
+ex_Error_null EXCEPTION;
 lv_errormsg_txt VARCHAR(100);
 BEGIN
 
+SELECT COUNT (*)
+INTO email_check
+FROM VM_PERSON
+WHERE p_person_email = PERSON_EMAIL;
+
+IF email_check > 0 THEN
+
+SELECT PERSON_ID
+INTO p_person_ID
+FROM VM_PERSON
+WHERE p_person_email = PERSON_EMAIL;
+
+lv_errormsg_txt := 'Email address' || p_person_email || ' is used by Person id ' || p_person_ID;
+RAISE ex_Error;
+
+ELSIF email_check = 0 THEN
+p_person_ID := PERSON_ID_SEQ.nextval;
+
+END IF;
+
 IF p_person_email is NULL THEN
-   RAISE ex_Error;
+   RAISE ex_Error_null;
     END IF;
 
-select count (*)
-into p_count 
-from VM_PERSON
-where p_person_email = person_email;
-    
-if p_count > 0 
-then 
-lv_errormsg_txt := 'The email already exists, try another one ';
-raise ex_error;
-elsif p_person_email is null then
-lv_errormsg_txt := 'the email  must not be null.';
-end if;
 
     INSERT INTO vm_person (
     person_id,
     person_email,
     person_given_name,
     person_surname,
-    person_phone ) 
+    person_phone )
     VALUES (
-    inc_seq.nextval,
+    p_person_id,
     p_person_email,
     P_person_given_name,
     p_person_surname,
     p_person_phone
 );
+
  COMMIT;
  
-Exception
-    when ex_error then
-    dbms_output.put_line(lv_errormsg_txt);
-    rollback;
-    when others then
-    dbms_output.put_line(' the error code is: ' || sqlcode);
-    dbms_output.put_line(' the error msg is: ' || sqlerrm);
-    rollback;
-
-   /*EXCEPTION
- WHEN ex_Error THEN
-    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+  EXCEPTION
+  When ex_Error THEN
+  DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+  ROLLBACK;
+    
+     WHEN ex_Error_null THEN
     DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x)  in context (y).  No person added."');
-    DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory value is missing.  Here, y = "CREATE_PERSON_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory value is missing.  Here, y = "CREATE_PERSON_SP" ');
     DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
             inserted into the VM_PERSON table.  The p_person_id value returned is NULL.  ');
+            
     ROLLBACK;
-  WHEN DUP_VAL_ON_INDEX THEN
-    DBMS_OUTPUT.PUT_LINE('Error text:  "Email address (x) is already used."');
-    DBMS_OUTPUT.PUT_LINE('Error effect:  Because the email must be unique, no data are inserted into the 
-            VM_PERSON data.  The p_person_ID value returned is the one that corresponds to the person already in the table with this email.');
-    ROLLBACK;
- WHEN OTHERS THEN
+     WHEN OTHERS THEN
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
-    ROLLBACK;*/
+    ROLLBACK;  
     
-END;
+    END;
+
+
