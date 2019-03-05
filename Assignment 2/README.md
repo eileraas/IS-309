@@ -3,3 +3,4 @@ The group exists of Ling, Brage and Martin. For the most part, Martin and Brage 
 CREAT_ LOCATION: We can add data in location and printed out error message about attributes that has NULL, however it is not fully completed. We have made an attempt, marked / * * / around it.
 
 We had a trouble on the create_member procedure (no complied). Ling has taken over and succesffuly made it work.
+Updates on 3/5/2019. Previously we had a trouble on Create_location procedures as well. Ling has taken over and succesfully made it work.
