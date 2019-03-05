@@ -9,40 +9,49 @@ create or replace procedure CREATE_LOCATION_SP (
 )
 
 IS
-/*
+
 location_postal_code_check NUMBER;
 location_country_check NUMBER;
-location_street1_check NUMBER;*/
+location_street1_check NUMBER;
 ex_error EXCEPTION;
 lv_errormsg_txt VARCHAR(100);
 
 BEGIN
 
-/*SELECT COUNT (*)
-INTO location_postal_code_check, location_country_check, location_street1_check
+SELECT COUNT (*)
+INTO location_postal_code_check
 FROM VM_LOCATION
-WHERE p_location_postal_code = LOCATION_POSTAL_CODE AND p_location_country = LOCATION_COUNTRY 
-AND p_location_street1 = LOCATION_STREET1;
+WHERE p_location_postal_code = LOCATION_POSTAL_CODE;
 
-IF location_postal_code_check, location_country_check, ELSIF location_street1_check > 0 THEN
+SELECT COUNT (*)
+INTO location_country_check
+FROM VM_LOCATION
+WHERE p_location_country = LOCATION_COUNTRY;
+
+SELECT COUNT (*)
+INTO location_street1_check
+FROM VM_LOCATION
+WHERE p_location_street1 = LOCATION_STREET_1;
+
+IF location_postal_code_check > 0 AND location_country_check > 0 AND location_street1_check > 0 THEN
 
 SELECT LOCATION_ID
 INTO p_location_ID
 FROM VM_LOCATION
 WHERE p_location_postal_code = LOCATION_POSTAL_CODE AND p_location_country = LOCATION_COUNTRY 
-AND p_location_street1 = LOCATION_STREET1;
+AND p_location_street1 = LOCATION_STREET_1;
 
-lv_errormsg_txt := 'this location already exists ' || p_loaction_ID|| ;
+lv_errormsg_txt := 'this location already exists which is used by LocationID ' || p_location_id;
 RAISE ex_Error;
 
-ELSIF location_postal_code_check AND location_country_check AND location_street1_check = 0 THEN
+ELSIF location_postal_code_check = 0 AND location_country_check = 0 AND location_street1_check = 0 THEN
 p_location_ID := LOCATION_ID_SQ.nextval;
 
-END IF;*/
+END IF;
 
-IF p_location_country is NULL THEN
-   RAISE ex_error;
-    END IF;
+IF p_location_country is NULL OR p_location_postal_code is NULL THEN
+   RAISE NO_DATA_FOUND;
+END IF;
 
 	INSERT INTO VM_LOCATION (
     location_id,
@@ -65,21 +74,11 @@ IF p_location_country is NULL THEN
 
 COMMIT;
 
- /*EXCEPTION
-  When ex_Error THEN
-  DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
-  ROLLBACK;
-      
-   WHEN OTHERS THEN
-    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
-    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
-    ROLLBACK;  
-    
-    END;*/
-    
 EXCEPTION
  WHEN ex_error THEN
     DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    ROLLBACK;
+ WHEN NO_DATA_FOUND THEN
     DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x).  No location added.');
     DBMS_OUTPUT.PUT_LINE(' Error meaning: A mandatory value is missing.  Here, y = ''CREATE_LOCATION_SP''');
     DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
@@ -88,6 +87,6 @@ EXCEPTION
     ROLLBACK;
  WHEN OTHERS THEN
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
-    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
     ROLLBACK;
 END;
