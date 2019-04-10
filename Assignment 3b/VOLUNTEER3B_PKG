@@ -1,4 +1,4 @@
-create or replace package volunteer3b_pkg
+create or replace package body volunteer3b_pkg
 IS
 procedure CREATE_LOCATION_SP (
   p_location_id		    OUT	INTEGER,        -- an output parameter
