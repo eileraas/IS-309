@@ -1,1 +1,1253 @@
-hei
+create or replace package volunteer3b_pkg
+IS
+procedure CREATE_LOCATION_SP (
+  p_location_id		    OUT	INTEGER,        -- an output parameter
+  p_location_country	IN	VARCHAR,        -- must not be NULL
+  p_location_postal_code IN	VARCHAR,        -- must not be NULL
+  p_location_street1	IN	VARCHAR,
+  p_location_street2	IN	VARCHAR,
+  p_location_city	    IN	VARCHAR,
+  p_location_administrative_region IN VARCHAR
+)
+
+IS
+
+location_postal_code_check NUMBER;
+location_country_check NUMBER;
+location_street1_check NUMBER;
+ex_error EXCEPTION;
+lv_errormsg_txt VARCHAR(100);
+
+BEGIN
+
+SELECT COUNT (*)
+INTO location_postal_code_check
+FROM VM_LOCATION
+WHERE p_location_postal_code = LOCATION_POSTAL_CODE;
+
+SELECT COUNT (*)
+INTO location_country_check
+FROM VM_LOCATION
+WHERE p_location_country = LOCATION_COUNTRY;
+
+SELECT COUNT (*)
+INTO location_street1_check
+FROM VM_LOCATION
+WHERE p_location_street1 = LOCATION_STREET_1;
+
+IF location_postal_code_check > 0 AND location_country_check > 0 AND location_street1_check > 0 THEN
+
+SELECT LOCATION_ID
+INTO p_location_ID
+FROM VM_LOCATION
+WHERE p_location_postal_code = LOCATION_POSTAL_CODE AND p_location_country = LOCATION_COUNTRY 
+AND p_location_street1 = LOCATION_STREET_1;
+
+lv_errormsg_txt := 'this location already exists which is used by LocationID ' || p_location_id;
+RAISE ex_Error;
+
+ELSIF location_postal_code_check = 0 AND location_country_check = 0 AND location_street1_check = 0 THEN
+p_location_ID := LOCATION_ID_SQ.nextval;
+
+END IF;
+
+IF p_location_country is NULL OR p_location_postal_code is NULL THEN
+   RAISE NO_DATA_FOUND;
+END IF;
+
+	INSERT INTO VM_LOCATION (
+    location_id,
+    location_country,
+    location_postal_code,
+    location_street_1,
+    location_street_2,
+    location_city,
+    location_administrative_region
+    
+) VALUES (
+    inc_seq.nextval,
+    p_location_country,
+    p_location_postal_code,
+    p_location_street1,
+    p_location_street2,
+    p_location_city,
+    p_location_administrative_region    
+);
+
+COMMIT;
+
+EXCEPTION
+ WHEN ex_error THEN
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    ROLLBACK;
+ WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x).  No location added.');
+    DBMS_OUTPUT.PUT_LINE(' Error meaning: A mandatory value is missing.  Here, y = ''CREATE_LOCATION_SP''');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
+    inserted into the VM_LOCATION table.  The p_location_id value returned is 
+    NULL.');
+    ROLLBACK;
+ WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
+    ROLLBACK;
+END;
+
+
+procedure CREATE_PERSON_SP (
+    p_person_ID             OUT INTEGER, -- an output parameter
+    p_person_email          IN VARCHAR,  -- Must be unique, not null
+    P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_surname        IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_phone          IN VARCHAR
+)
+IS
+email_check NUMBER;
+ex_Error EXCEPTION;
+ex_Error_null EXCEPTION;
+lv_errormsg_txt VARCHAR(100);
+lv_errormsg_null_txt VARCHAR(300);
+BEGIN
+
+SELECT COUNT (*)
+INTO email_check
+FROM VM_PERSON
+WHERE p_person_email = PERSON_EMAIL;
+
+IF email_check > 0 THEN
+
+SELECT PERSON_ID
+INTO p_person_ID
+FROM VM_PERSON
+WHERE p_person_email = PERSON_EMAIL;
+
+lv_errormsg_txt := 'Email address ' || p_person_email || ' is used by Person id ' || p_person_ID;
+RAISE ex_Error;
+
+ELSIF email_check = 0 THEN
+p_person_ID := PERSON_ID_SEQ.nextval;
+
+END IF;
+
+IF p_person_email is NULL THEN
+lv_errormsg_null_txt := 'Because a mandatory value is not provided, no data are inserted into person id '|| p_person_ID || ' , no person added.';
+RAISE ex_Error_null;
+END IF;
+
+
+    INSERT INTO vm_person (
+    person_id,
+    person_email,
+    person_given_name,
+    person_surname,
+    person_phone )
+    VALUES (
+    p_person_id,
+    p_person_email,
+    P_person_given_name,
+    p_person_surname,
+    p_person_phone
+);
+
+
+ COMMIT;
+ 
+
+  EXCEPTION
+  When ex_Error THEN
+  DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+  ROLLBACK;
+  
+  WHEN ex_Error_null THEN
+  DBMS_OUTPUT.PUT_LINE (lv_errormsg_null_txt);
+    
+   
+   WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
+    ROLLBACK;  
+    
+    END;
+    
+    
+    
+procedure CREATE_MEMBER_SP (
+    p_person_ID             OUT INTEGER,     -- an output parameter
+    p_person_email          IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    P_person_given_name     IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    p_person_surname        IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    p_person_phone          IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    p_location_id	          IN  VARCHAR,
+    p_location_country	    IN  VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_postal_code  IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_street1	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_street2	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_city	        IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR, -- passed through to CREATE_LOCATION_SP
+    p_member_password       IN  VARCHAR   -- NOT NULL 
+)
+IS
+email_check NUMBER;
+locationid_check NUMBER;
+lv_person_id_num     VM_MEMBER.PERSON_ID%TYPE;
+lv_p_location_id_num VM_LOCATION.LOCATION_ID%TYPE;
+ex_Error EXCEPTION;
+ex_error1 Exception;
+lv_errormsg_txt VARCHAR(100);
+lv_errormsg1_txt VARCHAR(100);
+
+BEGIN
+
+SELECT COUNT (*)
+INTO email_check
+FROM VM_PERSON
+WHERE p_person_email = PERSON_EMAIL;
+
+IF email_check > 0 THEN
+
+SELECT PERSON_ID
+INTO p_person_ID
+FROM VM_PERSON
+WHERE p_person_email = PERSON_EMAIL;
+
+lv_errormsg_txt := 'Email address ' || p_person_email || ' is used by Person id ' || p_person_ID;
+RAISE ex_Error;
+
+ELSIF email_check = 0 THEN
+p_person_ID := PERSON_ID_SEQ.nextval;
+
+END IF;
+
+SELECT COUNT (*)
+INTO locationid_check
+FROM VM_LOCATION
+WHERE p_location_id = LOCATION_ID;
+
+IF locationid_check > 0 THEN
+
+lv_errormsg1_txt := 'Location ' || p_location_id || ' is used ';
+RAISE ex_Error1;
+
+END IF;
+  
+IF p_person_id is NULL THEN
+   RAISE ex_Error;
+    END IF;
+
+IF p_location_id is NULL THEN
+   RAISE ex_Error;
+    END IF;
+
+   INSERT INTO VM_PERSON(
+    person_id,
+    person_email,
+    person_given_name,
+    person_surname,
+    person_phone
+    )
+    VALUES (
+    p_person_id,
+    p_person_email,
+    P_person_given_name,
+    p_person_surname,
+    p_person_phone
+    
+);
+
+    INSERT INTO VM_LOCATION (
+    location_id,
+    location_country,
+    LOCATION_POSTAL_CODE,
+    LOCATION_STREET_1,
+    location_street_2,
+    location_city,
+    location_administrative_region) 
+    
+    VALUES (
+    p_location_id,
+    p_location_country,
+    p_LOCATION_POSTAL_CODE,
+    p_location_street1,
+    p_location_street2,
+    p_location_city,
+    p_location_administrative_region
+    
+);
+
+   INSERT INTO VM_MEMBER(
+    person_id,
+    member_password,
+    location_id
+    )
+    
+    VALUES (
+    p_person_id,
+    p_member_password,
+    p_location_id
+);
+
+EXCEPTION
+ WHEN ex_Error THEN
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x)  in context (y).  No member added."');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory value is missing.  Here, y = "CREATE_MEMBER_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
+            inserted into the VM_MEMBER table.  The p_person_id value returned 
+            is NULL.  ');
+    ROLLBACK;
+  WHEN ex_Error1 THEN 
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg1_txt);
+    ROLLBACK;
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value (x) in context (y). No member created."');
+    DBMS_OUTPUT.PUT_LINE('Error meaning:  A value for parameter x is not valid.  Here, y = "CREATE_MEMBER_SP".
+        This could arise if the person_id returned by CREATE_PERSON_SP is not valid,
+        or the location_id returned by CREATE_LOCATION_SP is not valid. ');
+    ROLLBACK;
+ WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
+    ROLLBACK;
+END;
+
+
+procedure CREATE_ORGANIZATION_PP (
+    p_org_id                    OUT INTEGER,    -- output parameter
+    p_org_name                  IN VARCHAR,     -- NOT NULL
+    p_org_mission               IN VARCHAR,     -- NOT NULL
+    p_org_descrip               IN LONG,            
+    p_org_phone                 IN VARCHAR,     -- NOT NULL
+    p_org_type                  IN VARCHAR,     -- must conform to domain, if it has a value
+    p_org_creation_date         IN DATE,            -- IF NULL, use SYSDATE
+    p_org_URL                   IN VARCHAR,
+    p_org_image_URL             IN VARCHAR,
+    p_org_linkedin_URL          IN VARCHAR,
+    p_org_facebook_URL          IN VARCHAR,
+    p_org_twitter_URL           IN VARCHAR,
+    p_location_country	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_postal_code      IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street1	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street2	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_city	            IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_person_email              IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    P_person_given_name         IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    p_person_surname            IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    p_person_phone              IN VARCHAR   -- passed to CREATE_PERSON_SP
+);
+procedure CREATE_OPPORTUNITY_PP (
+    p_opp_id                    OUT INTEGER,        -- output parameter
+    p_org_id                    IN  INTEGER,        -- NOT NULL
+    p_opp_title                 IN  VARCHAR,   -- NOT NULL
+    p_opp_description           IN  LONG,       
+    p_opp_create_date           IN  DATE,       -- If NULL, use SYSDATE
+    p_opp_max_volunteers        IN  INTEGER,    -- If provided, must be > 0
+    p_opp_min_volunteer_age     IN  INTEGER,    -- If provided, must be between 0 and 125
+    p_opp_start_date            IN  DATE,
+    p_opp_start_time            IN  CHAR,       
+    p_opp_end_date              IN  DATE,
+    p_opp_end_time              IN  CHAR,
+    p_opp_status                IN  VARCHAR,    -- If provided, must conform to domain
+    p_opp_great_for             IN  VARCHAR,    -- If provided, must conform to domain
+    p_location_country	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_postal_code      IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street1	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street2	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_city	            IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_person_email              IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    P_person_given_name         IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    p_person_surname            IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    p_person_phone              IN VARCHAR    -- passed to CREATE_PERSON_SP    
+);
+
+
+
+procedure ADD_ORG_CAUSE_SP (
+    p_org_id            IN  INTEGER,    -- NOT NULL
+    p_cause_name        IN  VARCHAR -- NOT NULL
+)
+IS
+ex_Error EXCEPTION;
+lv_errormsg_txt VARCHAR(100);
+
+BEGIN
+IF p_org_id is NULL THEN
+    RAISE ex_Error;
+    END IF;
+
+IF p_cause_name  is NULL THEN
+    RAISE ex_Error;
+    END IF;
+    
+    INSERT INTO vm_orgcause (
+    organization_id,
+    cause_name
+) VALUES (
+    p_org_id,
+    p_cause_name
+);
+
+COMMIT;
+
+ EXCEPTION
+ WHEN ex_Error THEN
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x) in context (y)"');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a cause name and an organization id are required, 
+        Missing either one causes this error.  Here, y = "ADD_ORG_CAUSE_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
+            inserted into the VM_ORG_CAUSE table.');
+    ROLLBACK;
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value for parameter (x) in context (y)."');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Either the p_cause_name value is not found in VM_CAUSE_NAME,
+    or the p_org_id value is not found in the VM_ORGANIZATION table. 
+    Here, y = "ADD_ORG_CAUSE_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the
+            VM_CAUSE_NAME table.');  
+    ROLLBACK;
+ WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+    ROLLBACK;
+END;
+
+
+procedure ADD_MEMBER_CAUSE_SP (
+    p_person_id     IN  INTEGER,    -- NOT NULL
+    p_cause_name    IN  VARCHAR     -- NOT NULL
+)
+
+IS
+    lv_person_id_num     VM_MEMBER.PERSON_ID%TYPE;
+    lv_cause_name_txt    VM_CAUSE.CAUSE_NAME%TYPE;
+    ex_isnull_id         EXCEPTION;
+       
+BEGIN
+   SELECT PERSON_ID, CAUSE_NAME
+   INTO lv_person_id_num, lv_cause_name_txt
+   FROM VM_MEMBER, VM_CAUSE
+   WHERE person_ID = p_person_id AND CAUSE_NAME = p_cause_name;
+   
+    IF p_person_ID is NULL THEN
+    RAISE ex_isnull_id;
+    END IF;
+
+    IF p_cause_name is NULL THEN
+    RAISE ex_isnull_id;
+    END IF;
+
+   INSERT INTO vm_memcause (
+    person_id,
+    cause_name
+) VALUES (
+    p_person_id,
+    p_cause_name
+);
+
+commit; 
+
+EXCEPTION
+  WHEN ex_isnull_id THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x) in context (y)"');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a cause name and an organization id are required, Missing either one causes this error.  Here, y = “ADD_MEMBER_CAUSE_SP”. ');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are inserted into the VM_ORG_CAUSE table.');
+    ROLLBACK;
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value for parameter (x) in context (y)."');
+    DBMS_OUTPUT.PUT_LINE('Error meaning.  Either the p_cause_name value is not found in VM_MEMCAUSE,or the p_person_id value is not found in the VM_MEMBER table. Here, y = "ADD_MEMBER_CAUSE_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the VM_MEMCAUSE table.');
+    ROLLBACK;
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('An error occured. ');
+    DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE('Error message: ' ||SQLERRM);
+    ROLLBACK;  
+END;
+
+
+procedure ADD_OPP_SKILL_SP (
+    p_skill_name    IN  VARCHAR,    -- NOT NULL
+    p_opp_id        IN  INTEGER    -- NOT NULL
+)
+IS
+lv_opp_id_num     VM_OPPORTUNITY.OPPORTUNITY_ID%TYPE;
+lv_skill_name_txt    VM_SKILL.SKILL_NAME%TYPE;
+ex_Error EXCEPTION;
+lv_errormsg_txt VARCHAR(100);
+BEGIN
+
+SELECT OPPORTUNITY_ID, SKILL_NAME
+   INTO lv_opp_id_num, lv_skill_name_txt
+   FROM VM_OPPORTUNITY, VM_SKILL
+   WHERE OPPORTUNITY_ID = p_opp_id AND SKILL_NAME = p_skill_name;
+
+IF p_skill_name is NULL THEN
+    RAISE ex_Error;
+    END IF;
+
+IF p_opp_id  is NULL THEN
+    RAISE ex_Error;
+    END IF;
+
+INSERT INTO vm_oppskill (skill_name, opportunity_id) 
+VALUES (p_skill_name, p_opp_id   
+);
+
+
+COMMIT;
+
+ EXCEPTION
+ WHEN ex_Error THEN
+    DBMS_OUTPUT.PUT_LINE (lv_errormsg_txt);
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x) in context (y)"');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a skill name and an opportunity id are required, 
+        Missing either one causes this error.  Here, y = "ADD_OPP_SKILL_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are 
+            inserted into the VM_OPPSKILL table.  ');
+    ROLLBACK;
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value for parameter (x) in context (y)."');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Either the p_skill_name value is not found in VM_SKILL,
+    or the p_opp_id value is not found in the VM_OPPORTUNITY  table. 
+    Here, y = "ADD_OPP_SKILL_SP"');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the
+            VM_OPPSKILL table.');  
+    ROLLBACK;
+ WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
+    ROLLBACK;
+END;
+
+
+procedure ADD_MEMBER_SKILL_SP (
+    p_person_id     IN  INTEGER,
+    p_skill_name    IN  VARCHAR 
+)
+IS
+    lv_person_id_num     VM_MEMBER.PERSON_ID%TYPE;
+    lv_skill_name_txt    VM_SKILL.SKILL_NAME%TYPE;
+    ex_isnull_id         EXCEPTION;
+   
+BEGIN
+   SELECT PERSON_ID, SKILL_NAME
+   INTO lv_person_id_num, lv_skill_name_txt
+   FROM VM_MEMBER, VM_SKILL
+   WHERE person_ID = p_person_id AND SKILL_NAME = p_skill_name;
+
+    IF p_person_ID is NULL THEN
+    RAISE ex_isnull_id;
+    END IF;
+
+    IF p_skill_name is NULL THEN
+    RAISE ex_isnull_id;
+    END IF;
+
+   INSERT INTO vm_memskill (
+    person_id,
+    skill_name
+) VALUES (
+    p_person_id,
+    p_skill_name
+);
+
+commit;
+
+EXCEPTION
+  WHEN ex_isnull_id THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Missing mandatory value for parameter (x) in context (y)"');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Since both a cause name and an organization id are required, Missing either one causes this error.  Here, y = "ADD_MEMBER_SKILL_SP". ');
+    DBMS_OUTPUT.PUT_LINE('Error effect: Because a mandatory value is not provided, no data are inserted into the VM_MEMSKILL table.');
+    ROLLBACK;
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Error text:  "Invalid value for parameter (x) in context (y)."');
+    DBMS_OUTPUT.PUT_LINE('Error meaning: Either the p_skill_name value is not found in VM_SKILL, or the p_person_id value is not found in the VM_MEMBER table. Here, y = "ADD_MEMBER_SKILL_SP".');
+    DBMS_OUTPUT.PUT_LINE('Error effect:  Because a value is invalid, no data are inserted into the VM_MEMSKILL table.');
+    ROLLBACK;
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('An error occured. ');
+    DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
+    DBMS_OUTPUT.PUT_LINE('Error message: ' ||SQLERRM);
+    ROLLBACK;  
+END;
+/*
+CREATE_COMMITMENT_PP.  Allow a member to sign up for a volunteer opportunity.  
+Given a member email, an opportunity id, a commitment start date and a commitment 
+end date (both optional), create a new record in the VM_COMMITMENT table.  If 
+the member has already committed to this opportunity, then either (a) create a new 
+commitment (if the new window between the start and end dates does not overlap
+the existing commitment); or (b) update the dates of the existing commitment so that 
+the new window is the union of the new and old windows.   For example, if the member
+has already committed to an opportunity between 15-MAR-2019 and 18-MAR-2019 and then
+commits again for 17-MAR-2019 to 20-MAR-2019, then update the existing commitment
+so that the commitment is for 15-MAR-2019 to 20-MAR-2019.  If the current start 
+or end dates are NULL, then they should be updated with the new start and end dates.
+
+The procedure should also check that the start and end dates provided are within
+the start and end dates of the opportunity.  If the opportunity has NULL values for 
+the start and end dates, then any commitment dates are valid.
+
+The new commitment status should be set to "inquiry".
+
+If a new commitment is created, the commitment_id value should be returned using 
+the p_commitment_id output parameter.  If an existing commitment is found and updated,
+the p_commitment_id value should be set to the commitment id of this commitment. 
+Otherwise, p_commitment_id should be set to NULL.
+
+PARAMETERS:  Described below
+RETURNS:  a new or existing commitment_id, using the p_commitment_id output parameter
+ERROR MESSAGES:
+  Error text:  "Missing mandatory value for parameter (x).  No Commitment added." 
+  Error meaning: A mandatory value is missing.  Here, y = 'CREATE_COMMITMENT_PP'
+  Error effect: Because a mandatory value is not provided, no data are 
+    inserted into the VM_COMMITMENT table.  The p_commitment_id value returned is 
+    NULL.
+
+  Error text:  "Member (x) not found.  No commitment added."
+  Error meaning: A member with the given email address was not found in the 
+    VM_MEMBER and VM_PERSON tables.  
+  Error effect:  Because there is no member for this commitment, no row is added
+    to the VM_COMMITMENT table.  The p_commitment_id parameter returns a NULL value.
+
+  Error text:  "Missing opportunity.  No commitment added."
+  Error meaning: A opportunity with the given id was not found in the 
+    VM_OPPORTUNITY tables.  
+  Error effect:  Because there is no opportunity for this commitment, no row is added
+    to the VM_COMMITMENT table.  The p_commitment_id parameter returns a NULL value.  
+
+  Error text:  "Opportunity is inactive."
+  Error meaning:  The commitment dates lie outside of the start and end date window 
+    of the opportunity.
+  Error effect:  No row is added to the VM)COMMITMENT table.  The p_commitment_id 
+    parameter returns a NULL value.
+*/
+procedure CREATE_COMMITMENT_PP (
+    p_commitment_id     OUT INTEGER,    -- Output parameter
+    p_member_email      IN  VARCHAR,    -- Not NULL
+    p_opportunity_id    IN  VARCHAR,    -- Not NULL
+    p_start_date        IN  DATE,       
+    p_end_date          IN  DATE
+    )
+    
+IS
+lv_count number;
+lv_count_id number;
+errorPrint exception;
+err_msg_par_txt varchar(200) :=null;
+lv_opp_start_date DATE;
+lv_opp_end_date DATE;
+lv_commitment_id VM_COMMITMENT.COMMITMENT_ID%TYPE:= NULL;
+lv_creation_date VM_COMMITMENT.COMMITMENT_CREATION_DATE%TYPE;
+commitment_status varchar(10);
+
+
+BEGIN
+
+COMMITMENT_STATUS := 'inquiry';
+
+SELECT COUNT (COMMITMENT_ID)
+INTO lv_count_id
+FROM VM_COMMITMENT
+WHERE COMMITMENT_ID = p_commitment_id;
+
+IF p_commitment_id is null
+THEN err_msg_par_txt := 'Missing mandatory value for parameter COMMITMENT_ID. No Commitment added';
+RAISE errorPrint;
+
+ELSIF lv_count_id = 0 
+THEN err_msg_par_txt := 'Member '||p_member_email ||' not found.  No commitment added.';
+RAISE errorPrint;
+END IF;  
+
+SELECT COUNT (*)
+into lv_count
+from VM_person
+WHERE p_member_email = PERSON_EMAIL;
+
+IF p_member_email is null
+THEN err_msg_par_txt := 'Missing mandatory value for parameter p_member_email.  No Commitment added';
+RAISE errorPrint;
+
+ELSIf lv_count = 0
+THEN err_msg_par_txt := 'Member '||p_member_email ||' not found. No commitment added.';  
+RAISE errorPrint;
+END IF;
+
+SELECT COUNT (OPPORTUNITY_ID)
+INTO lv_count_id
+FROM VM_OPPORTUNITY
+WHERE OPPORTUNITY_ID = p_opportunity_id;
+
+IF p_opportunity_id is NULL
+THEN err_msg_par_txt := 'Missing opportunity.  No commitment added.';
+RAISE errorPrint;
+
+ELSIF lv_count = 0
+THEN err_msg_par_txt := 'Opportunity is inactive.';  
+RAISE errorPrint;
+END if;
+
+SELECT opportunity_start_date, opportunity_end_date 
+INTO lv_opp_start_date, lv_opp_end_date 
+FROM VM_OPPORTUNITY a 
+WHERE a.opportunity_id = p_opportunity_id;
+    
+IF (lv_opp_start_date IS NOT NULL 
+    OR lv_opp_end_date IS NOT NULL) THEN
+IF (lv_opp_start_date > p_end_date 
+    OR lv_opp_end_date < p_start_date 
+    OR lv_opp_start_date > p_start_date 
+    OR lv_opp_end_date < p_end_date) 
+THEN err_msg_par_txt := 'Opportunity start or end date is inactive';
+RAISE errorPrint;
+            
+END IF;
+END IF;
+
+INSERT INTO VM_COMMITMENT (
+COMMITMENT_ID, 
+COMMITMENT_CREATION_DATE, 
+COMMITMENT_STATUS, 
+COMMITMENT_START_DATE, 
+COMMITMENT_END_DATE, 
+OPPORTUNITY_ID, 
+PERSON_ID
+)
+VALUES (
+COMMITMENT_ID_SEQ.nextval,
+lv_creation_date, 
+commitment_status,
+p_start_date, 
+p_end_date, 
+p_opportunity_id,
+p_member_email 
+);
+
+
+
+COMMIT;
+
+
+Exception
+
+    when errorPrint then
+    dbms_output.put_line(err_msg_par_txt);
+    rollback;
+  
+    when others then
+    dbms_output.put_line(' the error code is: ' || sqlcode);
+    dbms_output.put_line(' the error msg is: ' || sqlerrm);
+    rollback;
+
+
+END CREATE_COMMITMENT_PP;				 
+				
+
+/*
+RECORD_HOURS_PP.  Record the hours worked by a member on a particular 
+opportunity on a particular day.  Given a member email, an opportunity id, and 
+a date, create a new record in the VM_TIMETABLE table.  Only one record can be 
+made on a given day for a given member and opportunity.
+
+The TIMESHEET_CREATION_DATE is to be set to the current date (use Oracle's CURRENT_DATE function).
+
+The TIMESHEET_STATUS value is to be set to 'pending'.
+
+PARAMETERS:     Described below
+RETURNS:        Nothing
+ERROR MESSAGES: 
+  Error text:  "Invalid number of hours for opportunity x. Must be
+                a number between 1 and 24 hours. " 
+  Error meaning: The number of ours violates the domain definition, or is missing
+  Error effect: Because the number of hours is invalid, no timesheet record is
+        created.
+
+  Error text:  "Member (x) not found.  No hours added."
+  Error meaning: A member with the given email address was not found in the 
+    VM_MEMBER and VM_PERSON tables.  
+  Error effect:  Because there is no member for this timesheet entry, no row is added
+    to the VM_TIMESHEET table.  
+
+  Error text:  "Missing opportunity.  No commitment added."
+  Error meaning: A opportunity with the given id was not found in the 
+    VM_OPPORTUNITY tables.  
+  Error effect:  Because there is no opportunity for this timesheet entry, no row is added
+    to the VM_TIMESHEET table.  
+
+  Error text: "Missing work date for opportunity x."
+  Error meaning:  The date provided for the opportunity is invalid or missing.
+
+*/
+
+procedure RECORD_HOURS_PP (
+    p_member_email      IN  VARCHAR,    -- Not NULL
+    p_opportunity_id    IN  VARCHAR,    -- NOT NULL
+    p_hours             IN  NUMBER,     -- NOT NULL
+    p_volunteer_date    IN  DATE        -- NOT NULL
+)
+IS
+
+p_count_p number (10);
+p_count_o number (10);
+errorPrint EXCEPTION;
+err_msg_txt varchar(150) := '';
+lv_p_person VM_PERSON.PERSON_ID%TYPE:= NULL;
+timesheet_status varchar(10);
+approver number;
+lv_creation_date  DATE := current_date;
+
+BEGIN
+
+timesheet_status := 'pending';
+approver := 1; -- a member
+
+SELECT COUNT(*) INTO p_count_p
+FROM VM_PERSON a join VM_MEMBER b
+ON a.PERSON_EMAIL = p_member_email and a.PERSON_ID = b.PERSON_ID;
+
+IF p_count_p < 1
+THEN
+err_msg_txt:= 'There is no person registred with this email, try another email';
+RAISE errorPrint;
+ELSIF p_member_email IS NULL
+THEN
+err_msg_txt:= 'Email cannot be null';
+RAISE errorPrint;
+END IF;
+
+SELECT COUNT (*)
+INTO p_count_o
+FROM VM_OPPORTUNITY
+WHERE OPPORTUNITY_ID = p_opportunity_id;
+
+IF p_count_o < 1
+THEN
+err_msg_txt := 'There is no opportunity regisred with this id, try another id';
+RAISE errorPrint;
+ELSIF p_hours < 1 OR p_hours > 24 OR p_hours IS NULL
+THEN
+err_msg_txt := 'Invalid number: ' || p_hours || 'you must choose between 1-24 hours';
+RAISE errorPrint;
+ELSIF p_volunteer_date IS NULL
+THEN
+err_msg_txt := 'Volunteer_date cannot be null';
+END IF;
+
+INSERT INTO VM_TIMESHEET (
+TIMESHEET_VOLUNTEER_DATE, 
+TIMESHEET_VOLUNTEER_HOURS, 
+TIMESHEET_CREATION_DATE, 
+TIMESHEET_STATUS, 
+APPROVER_ID, 
+OPPORTUNITY_ID, 
+PERSON_ID
+)
+VALUES (
+p_volunteer_date, 
+p_hours, 
+lv_creation_date, 
+timesheet_status, 
+approver, 
+p_opportunity_id, 
+p_count_p
+);
+
+Exception
+    when errorPrint then
+    dbms_output.put_line(err_msg_txt);
+    rollback;
+    when others then
+    dbms_output.put_line(' the error code is: ' || sqlcode);
+    dbms_output.put_line(' the error msg is: ' || sqlerrm);
+    rollback;
+
+END RECORD_HOURS_PP;
+
+/*
+APPROVE_HOURS_PP.  Given a member email, an opportunity id, a volunteer date 
+(optional), an approver email, and an approval status value, update the status 
+and approver id of the existing record in VM_TIMESHEET.  If the date is NULL, 
+update all records for this member and opportunity.  
+
+PARAMETERS:     Described below
+RETURNS:        Nothing
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in APPROVE_HOURS_PP." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Approver (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Opportunity (x) not found."
+           x = opportunity id
+  Error meaning: The opportunity with the given id value cannot be found in the system.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Invalid value "x" for approval status."
+           x = approval status
+  Error meaning: The value for approval status is not included in the domain ("approved", "not approved", "pending").  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Member x has no recorded hours on opportunity y on z."  
+           x = member id; y = opportunity id; z = volunteer date
+  Error meaning: There is no row in VM_TIMESHEET with this combination of member, opportunity, and volunteer date.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+*/
+
+procedure APPROVE_HOURS_PP (
+    p_member_email      IN VARCHAR,    -- Must not be NULL.
+    p_approver_email    IN VARCHAR,    -- Must not be NULL.  Approver is a member.
+    p_opportunity_id    IN VARCHAR,    -- Must not be NULL.
+    p_volunteer_date    IN DATE,
+    p_approval_status   IN VARCHAR    -- Must not be NULL.
+);
+
+/*
+GET_MEMBER_HOURS_PF. Given a member email address, an opportunity ID, a start 
+date and an end date, calculate the number of hours worked.  The start date and
+end date can be NULL.  If both are NULL, then calculate the hours worked on this
+opportunity for all dates.
+PARAMETERS:     Described below
+RETURNS:        Calculated hours, or NULL
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Opportunity (x) not found."
+           x = opportunity id
+  Error meaning: The opportunity with the given id value cannot be found in the system.  
+  Error effect:  NULL value returned.
+
+  Error text:  "End date (x) must be later than the start date (y)"
+           x = the end date
+           y = the start date
+  Error meaning:  The start date of the range of dates can't be after the end date.
+  Error effect:  NULL value returned.
+
+
+*/
+function GET_MEMBER_HOURS_PF (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER
+
+is
+ res number;
+ i number :=0;
+ ex_WrongDate exception;
+ ex_isnull exception;
+ ex_not_found exception;
+ ex_o_not_found exception;
+ ex_date exception;
+ daily_workhour number;
+ p_workedHours VM_TIMESHEET.TIMESHEET_VOLUNTEER_HOURS%type;
+ 
+begin
+    IF p_member_email is NULL then
+    RAISE ex_isnull;
+    END IF;
+
+if p_start_date is not null or p_end_date is not null then
+        if p_start_date is not null and p_end_date is not null then
+            if p_start_date > p_end_date then
+                raise ex_WrongDate;
+            end if;
+            Select SUM(TIMESHEET_VOLUNTEER_HOURS) into p_workedHours from VM_TIMESHEET where person_id in 
+            (select person_id from vm_person where person_email = p_member_email) 
+            and opportunity_id = p_opportunity_ID
+            and timesheet_volunteer_date >= p_start_date 
+            and timesheet_volunteer_date <= p_end_date;
+            return p_workedHours;
+        elsif p_start_date is not null THEN 
+            Select SUM(TIMESHEET_VOLUNTEER_HOURS) into p_workedHours from VM_TIMESHEET where person_id in 
+            (select person_id from vm_person where person_email = p_member_email) 
+            and opportunity_id = p_opportunity_ID 
+            and timesheet_volunteer_date >= p_start_date;
+            return p_workedHours;
+        elsif p_end_date is not null THEN
+            Select SUM(TIMESHEET_VOLUNTEER_HOURS) into p_workedHours from VM_TIMESHEET where person_id in 
+            (select person_id from vm_person where person_email = p_member_email) 
+            and opportunity_id = p_opportunity_ID 
+            and timesheet_volunteer_date <= p_end_date;
+            return p_workedHours;
+        end if;
+    end if;
+    
+    
+    EXCEPTION
+  WHEN ex_isnull THEN
+     DBMS_OUTPUT.PUT_LINE( ' Error text:"Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." ');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory parameter is NULL');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect: NULL value returned. ');
+     return NULL;
+  when   ex_not_found  then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:Member(email address) not found');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: The member with the given email address cannot be found in the system. ');  
+     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
+    return NULL;
+  when   ex_o_not_found  then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:Opportunity (x) not found.');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: The opportunity with the given id value cannot be found in the system.  ');  
+     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
+    return NULL;
+  when   ex_date then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:End date (x) must be later than the start date (y)');
+     DBMS_OUTPUT.PUT_LINE('Error meaning:The start date of the range of dates can not be after the end date. ');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect:NULL value returned. ');
+    return NULL;
+    end;
+
+/*
+GET_MEMBER_HOURS_PF. Same name as the function above, but with different parameters.  
+This is overloading.  Given a member email address, a start 
+date and an end date, calculate the number of hours worked by opportunity. The 
+function should display the opportunity title for each opportunity on which the 
+member has volunteered in the given time range and the hours worked for each 
+opportunity.  The start date and end date can be NULL.  If both are NULL, then 
+display all opportunities on which the member has worked at any time.   The 
+function returns the sum of all hours within the specified range.
+PARAMETERS:     Described below
+RETURNS:        total number of hours worked, or NULL
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "End date (x) must be later than the start date (y)"
+           x = the end date
+           y = the start date
+  Error meaning:  The start date of the range of dates can't be after the end date.
+  Error effect:  NULL value returned.
+
+
+*/
+function GET_MEMBER_HOURS_PF_13 (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER
+is
+ res number;
+ i number :=0;
+ ex_isnull exception;
+ ex_not_found exception;
+ ex_o_not_found exception;
+ ex_date exception;
+ daily_workhour number;
+begin
+    IF p_member_email is NULL then
+    RAISE ex_isnull;
+    END IF;
+
+    IF p_opportunity_ID is NULL THEN
+    RAISE ex_isnull;
+    END IF;
+
+    select count(*) into i from vm_opportunity where OPPORTUNITY_ID=p_opportunity_ID;
+    if i=0 then 
+     raise ex_o_not_found;
+     end if;
+
+    select count(*) into i from vm_person where person_email=p_member_email;
+    if i=0 then 
+     raise ex_not_found;
+     end if;
+
+    if p_start_date>p_end_date then
+        raise ex_date;
+   end if;
+
+    select 
+    case when (p_end_date is NULL AND p_start_date is NULL) then
+    round(
+    (O.opportunity_end_date - O.opportunity_start_date) * 
+    (To_date(O.opportunity_end_time, 'hh24:mi') -  To_date(O.opportunity_start_time, 'hh24:mi')) * 24
+    ) 
+    else
+    round(
+    ( greatest(LEAST(O.opportunity_end_date, p_end_date), O.opportunity_start_date) - least(GREATEST(O.opportunity_start_date, p_start_date),O.opportunity_end_date) ) * 
+    (To_date(O.opportunity_end_time, 'hh24:mi') -  To_date(O.opportunity_start_time, 'hh24:mi')) * 24
+    ) 
+    end
+    into res 
+    from vm_opportunity O,vm_person P
+    where O.person_id=P.person_id
+    and P.person_email=p_member_email
+    and O.opportunity_ID=p_opportunity_ID;
+
+    return res;  
+
+EXCEPTION
+  WHEN ex_isnull THEN
+     DBMS_OUTPUT.PUT_LINE( ' Error text:"Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." ');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory parameter is NULL');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect: NULL value returned. ');
+     return NULL;
+  when   ex_not_found  then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:Member(email address) not found');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: The member with the given email address cannot be found in the system. ');  
+     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
+    return NULL;
+  when   ex_o_not_found  then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:Opportunity (x) not found.');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: The opportunity with the given id value cannot be found in the system.  ');  
+     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
+    return NULL;
+  when   ex_date then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:End date (x) must be later than the start date (y)');
+     DBMS_OUTPUT.PUT_LINE('Error meaning:The start date of the range of dates can not be after the end date. ');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect:NULL value returned. ');
+    return NULL;
+    
+    end;
+
+
+
+function GET_MEMBER_HOURS_PF_14 (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER
+is
+ res number;
+ i number :=0;
+ ex_isnull exception;
+ ex_not_found exception;
+ ex_date exception;
+ daily_workhour number;
+begin
+    IF p_member_email is NULL then
+    RAISE ex_isnull;
+    END IF;
+
+    select count(*) into i from vm_person where person_email=p_member_email;
+    if i=0 then 
+     raise ex_not_found;
+     end if;
+
+    if p_start_date>p_end_date then
+        raise ex_date;
+   end if;
+
+    select
+    sum(case when (p_end_date is NULL AND p_start_date is NULL) then
+    round(
+    (O.opportunity_end_date - O.opportunity_start_date) * 
+    (To_date(O.opportunity_end_time, 'hh24:mi') -  To_date(O.opportunity_start_time, 'hh24:mi')) * 24
+    ) 
+    else
+    round(
+    ( greatest(LEAST(O.opportunity_end_date, p_end_date), O.opportunity_start_date) - least(GREATEST(O.opportunity_start_date, p_start_date),O.opportunity_end_date) ) * 
+    (To_date(O.opportunity_end_time, 'hh24:mi') -  To_date(O.opportunity_start_time, 'hh24:mi')) * 24
+    ) 
+    end)
+    into res
+    from vm_opportunity O,vm_person P
+    where O.person_id=P.person_id
+    and P.person_email=p_member_email;
+
+    return res;  
+
+EXCEPTION
+  WHEN ex_isnull THEN
+     DBMS_OUTPUT.PUT_LINE( ' Error text:"Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." ');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory parameter is NULL');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect: NULL value returned. ');
+     return NULL;
+  when   ex_not_found  then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:Member(email address) not found');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: The member with the given email address cannot be found in the system. ');  
+     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
+    return NULL;
+  when   ex_date then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:End date (x) must be later than the start date (y)');
+     DBMS_OUTPUT.PUT_LINE('Error meaning:The start date of the range of dates can not be after the end date. ');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect:NULL value returned. ');
+    return NULL;
+
+end;
+
+
+
+/* 
+SEARCH_OPPORTUNITIES_PP.  Given a member email, list all opportunities that 
+match one or more of that member�s causes or skills.  Rank the results according 
+to how good the fit is.  For example, if an opportunity matches two causes and 
+two skills, it is ranked higher than an opportunity that matches one cause and 
+two skills.
+
+PARAMETERS:     Described below
+RETURNS:        nothing
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in GET_SEARCH_OPPORTUNITIES_PP." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  No results 
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  No results.  
+
+
+*/
+
+procedure SEARCH_OPPORTUNITIES_PP (
+    p_member_email      IN VARCHAR      -- Must not be NULL
+)
+IS
+     c SYS_REFCURSOR;
+     v_emp_id  number;
+     ranking number;
+BEGIN
+OPEN c for
+select OPPORTUNITY_ID, count(*) as ranking 
+from
+(
+select o.OPPORTUNITY_ID, count(*) from VM_PERSON p, VM_MEMSKILL s, VM_OPPSKILL o 
+where PERSON_EMAIL = p_member_email and p.PERSON_ID = s.PERSON_ID and s.skill_name = o.skill_name 
+group by o.OPPORTUNITY_ID
+union all
+select o.OPPORTUNITY_ID, count(*) from VM_PERSON p, VM_MEMCAUSE s, VM_ORGCAUSE org, VM_OPPORTUNITY o where 
+PERSON_EMAIL = p_member_email and p.PERSON_ID = s.PERSON_ID and s.cause_name = org.cause_name and org.ORGANIZATION_ID = o.ORGANIZATION_ID 
+group by o.OPPORTUNITY_ID)
+group by OPPORTUNITY_ID order by count(*) desc;
+
+  loop
+    FETCH c INTO v_emp_id, ranking;
+    DBMS_OUTPUT.PUT_LINE(v_emp_id );
+  end loop;
+END;
+
+
+
+
+end volunteer3b_pkg;
