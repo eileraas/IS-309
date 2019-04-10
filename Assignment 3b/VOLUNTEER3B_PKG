@@ -912,7 +912,101 @@ procedure APPROVE_HOURS_PP (
     p_opportunity_id    IN VARCHAR,    -- Must not be NULL.
     p_volunteer_date    IN DATE,
     p_approval_status   IN VARCHAR    -- Must not be NULL.
-);
+)
+IS
+p_count_p number (10);
+p_count_a number (10);
+p_count_o number (10);
+timerow_lv number (10);
+errorPrint EXCEPTION;
+err_msg_txt varchar(150) := '';
+lv_p_person VM_PERSON.PERSON_ID%TYPE:= NULL;
+timesheet_status varchar(10);
+BEGIN
+SELECT COUNT (*) 
+INTO p_count_p 
+FROM VM_PERSON 
+WHERE PERSON_EMAIL = p_member_email;
+IF p_count_p < 1 THEN
+err_msg_txt := 'Member not found';
+RAISE errorPrint;
+END IF;
+
+SELECT COUNT (*) 
+INTO p_count_a 
+FROM VM_PERSON 
+WHERE PERSON_EMAIL = p_approver_email;
+IF p_count_a < 1 THEN
+err_msg_txt := 'Approver not found';
+RAISE errorPrint;
+END IF;
+
+SELECT COUNT (*)
+INTO p_count_o 
+FROM VM_OPPORTUNITY 
+WHERE OPPORTUNITY_ID = p_opportunity_id;
+IF p_count_o < 1 THEN
+err_msg_txt := 'Opportunity does not exist';
+RAISE errorPrint;
+END IF;
+
+IF p_approval_status != 'approved' 
+AND p_approval_status != 'not approved' 
+AND p_approval_status != 'pending' 
+AND p_approval_status IS NULL THEN
+err_msg_txt := 'Invalid approval status';
+RAISE errorPrint;
+END IF;
+
+IF p_volunteer_date IS NULL THEN
+SELECT COUNT (*) 
+INTO timerow_lv FROM VM_TIMESHEET 
+WHERE PERSON_ID = (SELECT PERSON_ID 
+FROM VM_PERSON WHERE PERSON_EMAIL = p_member_email) 
+AND OPPORTUNITY_ID = p_opportunity_id;
+ELSE
+
+SELECT COUNT (*) 
+INTO timerow_lv 
+FROM VM_TIMESHEET 
+WHERE PERSON_ID = (SELECT PERSON_ID FROM VM_PERSON WHERE PERSON_EMAIL = p_member_email) 
+AND OPPORTUNITY_ID = p_opportunity_id 
+AND TIMESHEET_VOLUNTEER_DATE = p_volunteer_date;
+END IF;
+
+IF timerow_lv < 1 THEN
+err_msg_txt := 'No recorded hours found';
+RAISE errorPrint;
+END IF;
+
+IF p_volunteer_date IS NULL THEN
+UPDATE VM_TIMESHEET
+SET TIMESHEET_STATUS = p_approval_status,
+APPROVER_ID = (SELECT PERSON_ID FROM VM_PERSON WHERE PERSON_EMAIL = p_approver_email)
+WHERE PERSON_ID = (SELECT PERSON_ID FROM VM_PERSON WHERE PERSON_EMAIL = p_member_email)
+AND OPPORTUNITY_ID = p_opportunity_id;
+ELSE
+
+UPDATE VM_TIMESHEET
+SET TIMESHEET_STATUS = p_approval_status,
+APPROVER_ID = (SELECT PERSON_ID FROM VM_PERSON WHERE PERSON_EMAIL = p_approver_email)
+WHERE PERSON_ID = (SELECT PERSON_ID FROM VM_PERSON WHERE PERSON_EMAIL = p_member_email)
+AND OPPORTUNITY_ID = p_opportunity_id
+AND TIMESHEET_VOLUNTEER_DATE = p_volunteer_date;
+END IF;
+
+COMMIT;
+
+EXCEPTION
+    when errorPrint then
+    dbms_output.put_line(err_msg_txt);
+    rollback;
+    when others then
+    dbms_output.put_line(' the error code is: ' || sqlcode);
+    dbms_output.put_line(' the error msg is: ' || sqlerrm);
+    rollback;
+    
+END APPROVE_HOURS_PP;
 
 /*
 GET_MEMBER_HOURS_PF. Given a member email address, an opportunity ID, a start 
