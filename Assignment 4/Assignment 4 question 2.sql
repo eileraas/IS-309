@@ -3,6 +3,11 @@ datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
 extent management local uniform size 64 K
 segment space management auto;
 
+create tablespace TBS128kb
+datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
+extent management local uniform size 128 K
+segment space management auto;
+
 create tablespace TBS512kb
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
 extent management local uniform size 512 K
