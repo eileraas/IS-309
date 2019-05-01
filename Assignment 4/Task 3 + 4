@@ -66,16 +66,21 @@ PCTFREE 10
 STORAGE(INITIAL 352m NEXT 32m)
 TABLESPACE G8_TBS_32MB;
 
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_32;
+
+
 
 --TASK 4
 ALTER USER "GROUP8" QUOTA UNLIMITED ON "NAVN PÅ tablespace"
+
 ALTER USER "GROUP8" QUOTA UNLIMITED ON indxg8;
 
 CREATE TABLESPACE indxg8
 DATAFILE 'u01/app/oracle/oradata/WOLCOTTDB/indxg8.dbf' SIZE 10M AUTOEXTEND ON;
+ALTER USER "GROUP8" QUOTA UNLIMITED ON indxg8;
 
-After moving the tables into the tablespaces we created, all the indexes have the status unusable. Because the row'ids have changed after moving the tables
-and needs to be rebuilt.
+-- After moving the tables into the tablespaces we created, all the indexes have the status unusable. Because the row'ids have changed after moving the tables
+and needs to be rebuilt.--
 
 After rebuilding the indexes into a seperate tablespace they are all valid.
 
