@@ -20,7 +20,6 @@ GRANT SELECT ON VM_TIMESHEET TO Member_read;
 grant Create session to Member_read;
 
 
-
 /*b. The second shall have the privilege to execute all 
 of the procedures and functions in the volunteer3b_pkg package.  
 This would be a VolunteerMatch administrative position.*/
@@ -65,10 +64,14 @@ GRANT SELECT, INSERT ON VM_COMMITMENT TO member_role;
 grant Create session to member_role;
 
 /** 
-E: 
+5e
+Because we only have one package VOLUNTEER3B_PKG, we must give execute privileges to all of the procedures inside VOLUNTEER3B_PKG,
+instead of just specifying someone. That is why we are having problems
 
-F
+5f
+One solution is to create a new package with procedures that refer procedures inside the original package.
 **/
+
 
 
 /** 6.  Create two users. 
