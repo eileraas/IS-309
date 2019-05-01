@@ -1,1 +1,109 @@
+/*a. The first has the least possible privileges, to only read your tables.  
+It should not have the privileges to create anything in the database.*/
 
+CREATE ROLE Member_read;
+
+GRANT SELECT ON VM_MEMBER TO Member_read;
+GRANT SELECT ON VM_PERSON TO Member_read; 
+GRANT SELECT ON VM_MEMCAUSE TO Member_read; 
+GRANT SELECT ON VM_MEMSKILL TO Member_read; 
+GRANT SELECT ON VM_COMMITMENT TO Member_read;
+GRANT SELECT ON VM_CAUSE TO Member_read;
+GRANT SELECT ON VM_LOCATION TO Member_read;
+GRANT SELECT ON VM_OPPORTUNITY TO Member_read;
+GRANT SELECT ON VM_OPPDKILL TO Member_read;
+GRANT SELECT ON VM_ORGANIZATION TO Member_read;
+GRANT SELECT ON VM_ORGCAUSE TO Member_read;
+GRANT SELECT ON VM_SKILL TO Member_read;
+GRANT SELECT ON VM_TIMESHEET TO Member_read;
+
+grant Create session to Member_read;
+
+
+
+/*b. The second shall have the privilege to execute all 
+of the procedures and functions in the volunteer3b_pkg package.  
+This would be a VolunteerMatch administrative position.*/
+
+CREATE ROLE VolunteerMatch_administrative;
+
+GRANT EXECUTE ON volunteer3b_pkg TO VolunteerMatch_administrative; 
+
+grant Create session to VolunteerMatch_administrative;
+
+
+/*c. The third should have the privilege to execute 
+the procedures to create a new member (person), create a 
+new location, create a new organization, create a new opportunity, 
+associate causes with organizations, and associate skills with opportunities. 
+This would be an opportunity administrator role.*/
+
+CREATE ROLE Opportunity_administrator;
+
+GRANT EXECUTE ON CREATE_MEMBER_SP TO Opportunity_administrator;
+GRANT EXECUTE ON CREATE_PERSON_SP TO Opportunity_administrator;
+GRANT EXECUTE ON CREATE_LOCATION_SP TO Opportunity_administrator;
+GRANT EXECUTE ON CREATE_ORGANIZATION_SP TO Opportunity_administrator;
+GRANT EXECUTE ON CREATE_OPPORTUNITY_SP TO Opportunity_administrator;
+GRANT EXECUTE ON ADD_ORG_CAUSE_SP TO Opportunity_administrator;
+GRANT EXECUTE ON ADD_OPP_SKILL_SP TO Opportunity_administrator;
+
+grant Create session to Opportunity_administrator;
+
+/*d. The fourth shall have the privilege to create a new member 
+(and person), add a member cause, add member skills, 
+and create a commitment.  This would be a member role.*/
+
+CREATE ROLE member_role;
+
+GRANT SELECT, INSERT ON VM_MEMBER TO member_role;
+GRANT SELECT, INSERT ON VM_PERSON TO member_role; 
+GRANT SELECT, INSERT ON VM_MEMCAUSE TO member_role; 
+GRANT SELECT, INSERT ON VM_MEMSKILL TO member_role; 
+GRANT SELECT, INSERT ON VM_COMMITMENT TO member_role;
+
+grant Create session to member_role;
+
+/** 
+E
+
+F
+**/
+
+
+/** 6.  Create two users. 
+a.  Give the users name that start with XX_1, XX_2, where XX is the (possibly abbreviated) group name. 
+b.  Create a PROFILE with reasonable characteristics and use it when creating users. 
+c.  Give all users the default tablespace USERS. 
+d.  Give user #1 a quota of 0 MB on USERS (this prevents any table creation); 
+    give user #2 a quota of 50M on USERS. 
+e.  Grant the first user role (5.a); the second user, role (5.b)**/
+
+create profile privileges_profile
+limit
+sessions_per_user 2
+cpu_per_session 10000
+idle_time 30
+connect_time unlimited
+cpu_per_call 900
+;
+
+create user Mar_1
+identified by Martin
+default tablespace USERS
+quota 0M ON Users 
+temporary tablespace temp
+profile privileges_profile;
+grant Member_read to Mar_1;
+
+grant create session to Mar_1; 
+
+create user Bra_2
+identified by Brage
+default tablespace USERS
+quota 50M ON Users 
+temporary tablespace temp
+profile privileges_profile;
+grant VolunteerMatch_administrative to Bra_1;
+
+grant create session to Bra_1;
