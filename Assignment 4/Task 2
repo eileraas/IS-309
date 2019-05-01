@@ -67,3 +67,4 @@ extent management local uniform size 4 M
 segment space management auto;
 
 SELECT * FROM dba_tablespaces;
+SELECT * from user_tables;
