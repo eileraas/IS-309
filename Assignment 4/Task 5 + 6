@@ -65,7 +65,7 @@ GRANT SELECT, INSERT ON VM_COMMITMENT TO member_role;
 grant Create session to member_role;
 
 /** 
-E
+E: 
 
 F
 **/
@@ -79,13 +79,12 @@ d.  Give user #1 a quota of 0 MB on USERS (this prevents any table creation);
     give user #2 a quota of 50M on USERS. 
 e.  Grant the first user role (5.a); the second user, role (5.b)**/
 
-create profile privileges_profile
-limit
+create profile privileges_profile limit
 sessions_per_user 2
-cpu_per_session 10000
-idle_time 30
-connect_time unlimited
-cpu_per_call 900
+cpu_per_session unlimited
+idle_time 10
+connect_time 60
+cpu_per_call 2000
 ;
 
 create user Mar_1
@@ -107,3 +106,11 @@ profile privileges_profile;
 grant VolunteerMatch_administrative to Bra_1;
 
 grant create session to Bra_1;
+
+
+
+
+
+
+
+
