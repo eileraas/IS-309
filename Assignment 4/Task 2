@@ -1,70 +1,51 @@
-create tablespace TBS64kb
-datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
-extent management local uniform size 64 K
-segment space management auto;
-
-create tablespace TBS128kb
-datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
-extent management local uniform size 128 K
-segment space management auto;
-
-create tablespace TBS512kb
-datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
-extent management local uniform size 512 K
-segment space management auto;
-
-create tablespace TBS1MB
-datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
-extent management local uniform size 1 M
-segment space management auto;
-
-create tablespace TBS16MB
-datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
-extent management local uniform size 16 M
-segment space management auto;
-
-create tablespace TBS32MB
-datafile '/u01/app/oracle/oradata/WOLCOTTDB/' SIZE 10M autoextend on
-extent management local uniform size 32 M
-segment space management auto;
-
-____________________________________________________________________
-With new names:
-
 create tablespace G8_TBS_64K
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/Gruppe8-64k' SIZE 10M autoextend on
 extent management local uniform size 64 K
 segment space management auto;
+
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_64K;
 
 create tablespace G8_TBS_128K
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/Gruppe8-128k' SIZE 10M autoextend on
 extent management local uniform size 128 K
 segment space management auto;
 
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_128K;
+
 create tablespace G8_TBS_512K
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/Gruppe8-512k' SIZE 10M autoextend on
 extent management local uniform size 512 K
 segment space management auto;
+
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_512K;
 
 create tablespace G8_TBS_1MB
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/Gruppe8-1mb' SIZE 10M autoextend on
 extent management local uniform size 1 M
 segment space management auto;
 
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_1MB;
+
 create tablespace G8_TBS_8MB
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/Gruppe8-8mb' SIZE 10M autoextend on
 extent management local uniform size 4 M
 segment space management auto;
+
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_8MB;
 
 create tablespace G8_TBS_16MB
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/Gruppe8-16mb' SIZE 10M autoextend on
 extent management local uniform size 4 M
 segment space management auto;
 
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_16MB;
+
 create tablespace G8_TBS_32MB
 datafile '/u01/app/oracle/oradata/WOLCOTTDB/Gruppe8-32mb' SIZE 10M autoextend on
 extent management local uniform size 4 M
 segment space management auto;
+
+ALTER USER "GROUP8" QUOTA UNLIMITED ON G8_TBS_32MB;
 
 SELECT * FROM dba_tablespaces;
 SELECT * from user_tables;
