@@ -1,0 +1,365 @@
+create or replace package volunteer3b_pkg
+IS
+ procedure CREATE_LOCATION_PP ( 
+  p_location_id		    OUT	INTEGER,        -- an output parameter
+  p_location_country	IN	VARCHAR,        -- must not be NULL
+  p_location_postal_code IN	VARCHAR,        -- must not be NULL
+  p_location_street1	IN	VARCHAR,
+  p_location_street2	IN	VARCHAR,
+  p_location_city	    IN	VARCHAR,
+  p_location_administrative_region IN VARCHAR
+);
+
+procedure CREATE_PERSON_PP (
+    p_person_ID             OUT INTEGER, -- an output parameter
+    p_person_email          IN VARCHAR,  -- Must be unique, not null
+    P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_surname        IN VARCHAR,  -- NOT NULL, if email is unique (new)
+    p_person_phone          IN VARCHAR
+);
+
+procedure CREATE_MEMBER_PP (
+    p_person_ID             OUT INTEGER,     -- an output parameter
+    p_person_email          IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    P_person_given_name     IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    p_person_surname        IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    p_person_phone          IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
+    p_location_id	          IN  VARCHAR,
+    p_location_country	    IN  VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_postal_code  IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_street1	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_street2	    IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_city	        IN	VARCHAR,  -- passed through to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR, -- passed through to CREATE_LOCATION_SP
+    p_member_password       IN  VARCHAR   -- NOT NULL 
+);
+
+/**
+procedure CREATE_ORGANIZATION_PP (
+    p_org_id                    OUT INTEGER,    -- output parameter
+    p_org_name                  IN VARCHAR,     -- NOT NULL
+    p_org_mission               IN VARCHAR,     -- NOT NULL
+    p_org_descrip               IN LONG,            
+    p_org_phone                 IN VARCHAR,     -- NOT NULL
+    p_org_type                  IN VARCHAR,     -- must conform to domain, if it has a value
+    p_org_creation_date         IN DATE,            -- IF NULL, use SYSDATE
+    p_org_URL                   IN VARCHAR,
+    p_org_image_URL             IN VARCHAR,
+    p_org_linkedin_URL          IN VARCHAR,
+    p_org_facebook_URL          IN VARCHAR,
+    p_org_twitter_URL           IN VARCHAR,
+    p_location_country	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_postal_code      IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street1	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street2	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_city	            IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_person_email              IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    P_person_given_name         IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    p_person_surname            IN VARCHAR,  -- passed to CREATE_PERSON_SP
+    p_person_phone              IN VARCHAR   -- passed to CREATE_PERSON_SP
+);
+procedure CREATE_OPPORTUNITY_PP (
+    p_opp_id                    OUT INTEGER,        -- output parameter
+    p_org_id                    IN  INTEGER,        -- NOT NULL
+    p_opp_title                 IN  VARCHAR,   -- NOT NULL
+    p_opp_description           IN  LONG,       
+    p_opp_create_date           IN  DATE,       -- If NULL, use SYSDATE
+    p_opp_max_volunteers        IN  INTEGER,    -- If provided, must be > 0
+    p_opp_min_volunteer_age     IN  INTEGER,    -- If provided, must be between 0 and 125
+    p_opp_start_date            IN  DATE,
+    p_opp_start_time            IN  CHAR,       
+    p_opp_end_date              IN  DATE,
+    p_opp_end_time              IN  CHAR,
+    p_opp_status                IN  VARCHAR,    -- If provided, must conform to domain
+    p_opp_great_for             IN  VARCHAR,    -- If provided, must conform to domain
+    p_location_country	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_postal_code      IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street1	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_street2	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_city	            IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_location_administrative_region IN VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_person_email              IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    P_person_given_name         IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    p_person_surname            IN VARCHAR,   -- passed to CREATE_PERSON_SP
+    p_person_phone              IN VARCHAR    -- passed to CREATE_PERSON_SP    
+);
+**/
+
+procedure ADD_ORG_CAUSE_SP (
+    p_org_id            IN  INTEGER,    -- NOT NULL
+    p_cause_name        IN  VARCHAR -- NOT NULL
+);
+procedure ADD_MEMBER_CAUSE_SP (
+    p_person_id     IN  INTEGER,    -- NOT NULL
+    p_cause_name    IN  VARCHAR     -- NOT NULL
+);
+procedure ADD_OPP_SKILL_SP (
+    p_skill_name    IN  VARCHAR,    -- NOT NULL
+    p_opp_id        IN  INTEGER    -- NOT NULL
+);
+procedure ADD_MEMBER_SKILL_SP (
+    p_person_id     IN  INTEGER,
+    p_skill_name    IN  VARCHAR 
+);
+/*
+CREATE_COMMITMENT_PP.  Allow a member to sign up for a volunteer opportunity.  
+Given a member email, an opportunity id, a commitment start date and a commitment 
+end date (both optional), create a new record in the VM_COMMITMENT table.  If 
+the member has already committed to this opportunity, then either (a) create a new 
+commitment (if the new window between the start and end dates does not overlap
+the existing commitment); or (b) update the dates of the existing commitment so that 
+the new window is the union of the new and old windows.   For example, if the member
+has already committed to an opportunity between 15-MAR-2019 and 18-MAR-2019 and then
+commits again for 17-MAR-2019 to 20-MAR-2019, then update the existing commitment
+so that the commitment is for 15-MAR-2019 to 20-MAR-2019.  If the current start 
+or end dates are NULL, then they should be updated with the new start and end dates.
+
+The procedure should also check that the start and end dates provided are within
+the start and end dates of the opportunity.  If the opportunity has NULL values for 
+the start and end dates, then any commitment dates are valid.
+
+The new commitment status should be set to "inquiry".
+
+If a new commitment is created, the commitment_id value should be returned using 
+the p_commitment_id output parameter.  If an existing commitment is found and updated,
+the p_commitment_id value should be set to the commitment id of this commitment. 
+Otherwise, p_commitment_id should be set to NULL.
+
+PARAMETERS:  Described below
+RETURNS:  a new or existing commitment_id, using the p_commitment_id output parameter
+ERROR MESSAGES:
+  Error text:  "Missing mandatory value for parameter (x).  No Commitment added." 
+  Error meaning: A mandatory value is missing.  Here, y = 'CREATE_COMMITMENT_PP'
+  Error effect: Because a mandatory value is not provided, no data are 
+    inserted into the VM_COMMITMENT table.  The p_commitment_id value returned is 
+    NULL.
+
+  Error text:  "Member (x) not found.  No commitment added."
+  Error meaning: A member with the given email address was not found in the 
+    VM_MEMBER and VM_PERSON tables.  
+  Error effect:  Because there is no member for this commitment, no row is added
+    to the VM_COMMITMENT table.  The p_commitment_id parameter returns a NULL value.
+
+  Error text:  "Missing opportunity.  No commitment added."
+  Error meaning: A opportunity with the given id was not found in the 
+    VM_OPPORTUNITY tables.  
+  Error effect:  Because there is no opportunity for this commitment, no row is added
+    to the VM_COMMITMENT table.  The p_commitment_id parameter returns a NULL value.  
+
+  Error text:  "Opportunity is inactive."
+  Error meaning:  The commitment dates lie outside of the start and end date window 
+    of the opportunity.
+  Error effect:  No row is added to the VM)COMMITMENT table.  The p_commitment_id 
+    parameter returns a NULL value.
+*/
+procedure CREATE_COMMITMENT_PP (
+    p_commitment_id     OUT INTEGER,    -- Output parameter
+    p_member_email      IN  VARCHAR,    -- Not NULL
+    p_opportunity_id    IN  VARCHAR,    -- Not NULL
+    p_start_date        IN  DATE,       
+    p_end_date          IN  DATE
+    );
+
+/*
+RECORD_HOURS_PP.  Record the hours worked by a member on a particular 
+opportunity on a particular day.  Given a member email, an opportunity id, and 
+a date, create a new record in the VM_TIMETABLE table.  Only one record can be 
+made on a given day for a given member and opportunity.
+
+The TIMESHEET_CREATION_DATE is to be set to the current date (use Oracle's CURRENT_DATE function).
+
+The TIMESHEET_STATUS value is to be set to 'pending'.
+
+PARAMETERS:     Described below
+RETURNS:        Nothing
+ERROR MESSAGES: 
+  Error text:  "Invalid number of hours for opportunity x. Must be
+                a number between 1 and 24 hours. " 
+  Error meaning: The number of ours violates the domain definition, or is missing
+  Error effect: Because the number of hours is invalid, no timesheet record is
+        created.
+
+  Error text:  "Member (x) not found.  No hours added."
+  Error meaning: A member with the given email address was not found in the 
+    VM_MEMBER and VM_PERSON tables.  
+  Error effect:  Because there is no member for this timesheet entry, no row is added
+    to the VM_TIMESHEET table.  
+
+  Error text:  "Missing opportunity.  No commitment added."
+  Error meaning: A opportunity with the given id was not found in the 
+    VM_OPPORTUNITY tables.  
+  Error effect:  Because there is no opportunity for this timesheet entry, no row is added
+    to the VM_TIMESHEET table.  
+
+  Error text: "Missing work date for opportunity x."
+  Error meaning:  The date provided for the opportunity is invalid or missing.
+
+*/
+
+procedure RECORD_HOURS_PP (
+    p_member_email      IN  VARCHAR,    -- Not NULL
+    p_opportunity_id    IN  VARCHAR,    -- NOT NULL
+    p_hours             IN  NUMBER,     -- NOT NULL
+    p_volunteer_date    IN  DATE        -- NOT NULL
+);
+
+/*
+APPROVE_HOURS_PP.  Given a member email, an opportunity id, a volunteer date 
+(optional), an approver email, and an approval status value, update the status 
+and approver id of the existing record in VM_TIMESHEET.  If the date is NULL, 
+update all records for this member and opportunity.  
+
+PARAMETERS:     Described below
+RETURNS:        Nothing
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in APPROVE_HOURS_PP." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Approver (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Opportunity (x) not found."
+           x = opportunity id
+  Error meaning: The opportunity with the given id value cannot be found in the system.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Invalid value "x" for approval status."
+           x = approval status
+  Error meaning: The value for approval status is not included in the domain ("approved", "not approved", "pending").  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+  Error text:  "Member x has no recorded hours on opportunity y on z."  
+           x = member id; y = opportunity id; z = volunteer date
+  Error meaning: There is no row in VM_TIMESHEET with this combination of member, opportunity, and volunteer date.  
+  Error effect:  No changes are made to the VM_TIMESHEET table.  
+
+*/
+
+procedure APPROVE_HOURS_PP (
+    p_member_email      IN VARCHAR,    -- Must not be NULL.
+    p_approver_email    IN VARCHAR,    -- Must not be NULL.  Approver is a member.
+    p_opportunity_id    IN VARCHAR,    -- Must not be NULL.
+    p_volunteer_date    IN DATE,
+    p_approval_status   IN VARCHAR    -- Must not be NULL.
+);
+
+/*
+GET_MEMBER_HOURS_PF. Given a member email address, an opportunity ID, a start 
+date and an end date, calculate the number of hours worked.  The start date and
+end date can be NULL.  If both are NULL, then calculate the hours worked on this
+opportunity for all dates.
+PARAMETERS:     Described below
+RETURNS:        Calculated hours, or NULL
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Opportunity (x) not found."
+           x = opportunity id
+  Error meaning: The opportunity with the given id value cannot be found in the system.  
+  Error effect:  NULL value returned.
+
+  Error text:  "End date (x) must be later than the start date (y)"
+           x = the end date
+           y = the start date
+  Error meaning:  The start date of the range of dates can't be after the end date.
+  Error effect:  NULL value returned.
+
+
+*/
+function GET_MEMBER_HOURS_PF (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER;
+
+function GET_MEMBER_HOURS_PF_13 (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER;
+
+function GET_MEMBER_HOURS_PF_14 (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER;
+
+/*
+GET_MEMBER_HOURS_PF. Same name as the function above, but with different parameters.  
+This is overloading.  Given a member email address, a start 
+date and an end date, calculate the number of hours worked by opportunity. The 
+function should display the opportunity title for each opportunity on which the 
+member has volunteered in the given time range and the hours worked for each 
+opportunity.  The start date and end date can be NULL.  If both are NULL, then 
+display all opportunities on which the member has worked at any time.   The 
+function returns the sum of all hours within the specified range.
+PARAMETERS:     Described below
+RETURNS:        total number of hours worked, or NULL
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "End date (x) must be later than the start date (y)"
+           x = the end date
+           y = the start date
+  Error meaning:  The start date of the range of dates can't be after the end date.
+  Error effect:  NULL value returned.
+
+
+*/
+
+/* 
+SEARCH_OPPORTUNITIES_PP.  Given a member email, list all opportunities that 
+match one or more of that member�s causes or skills.  Rank the results according 
+to how good the fit is.  For example, if an opportunity matches two causes and 
+two skills, it is ranked higher than an opportunity that matches one cause and 
+two skills.
+
+PARAMETERS:     Described below
+RETURNS:        nothing
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in GET_SEARCH_OPPORTUNITIES_PP." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  No results 
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  No results.  
+
+
+*/
+
+procedure SEARCH_OPPORTUNITIES_PP (
+    p_member_email      IN VARCHAR      -- Must not be NULL
+);
+
+end volunteer3b_pkg;
