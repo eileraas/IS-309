@@ -1,6 +1,7 @@
-create or replace package body volunteer3b_pkg
+create or replace PACKAGE BODY VOLUNTEER3B_PKG 
 IS
-procedure CREATE_LOCATION_SP (
+
+ procedure CREATE_LOCATION_PP ( 
   p_location_id		    OUT	INTEGER,        -- an output parameter
   p_location_country	IN	VARCHAR,        -- must not be NULL
   p_location_postal_code IN	VARCHAR,        -- must not be NULL
@@ -9,9 +10,7 @@ procedure CREATE_LOCATION_SP (
   p_location_city	    IN	VARCHAR,
   p_location_administrative_region IN VARCHAR
 )
-
 IS
-
 location_postal_code_check NUMBER;
 location_country_check NUMBER;
 location_street1_check NUMBER;
@@ -31,7 +30,7 @@ FROM VM_LOCATION
 WHERE p_location_country = LOCATION_COUNTRY;
 
 SELECT COUNT (*)
-INTO location_street1_check
+INTO location_street1_check 
 FROM VM_LOCATION
 WHERE p_location_street1 = LOCATION_STREET_1;
 
@@ -91,10 +90,11 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
     ROLLBACK;
-END;
+END CREATE_LOCATION_PP;
 
 
-procedure CREATE_PERSON_SP (
+
+procedure CREATE_PERSON_PP (
     p_person_ID             OUT INTEGER, -- an output parameter
     p_person_email          IN VARCHAR,  -- Must be unique, not null
     P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
@@ -167,11 +167,9 @@ END IF;
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
     ROLLBACK;  
     
-    END;
-    
-    
-    
-procedure CREATE_MEMBER_SP (
+    END CREATE_PERSON_PP;
+
+procedure CREATE_MEMBER_PP (
     p_person_ID             OUT INTEGER,     -- an output parameter
     p_person_email          IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
     P_person_given_name     IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
@@ -308,9 +306,9 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
     ROLLBACK;
-END;
+END CREATE_MEMBER_PP;
 
-
+/**
 procedure CREATE_ORGANIZATION_PP (
     p_org_id                    OUT INTEGER,    -- output parameter
     p_org_name                  IN VARCHAR,     -- NOT NULL
@@ -361,7 +359,7 @@ procedure CREATE_OPPORTUNITY_PP (
     p_person_phone              IN VARCHAR    -- passed to CREATE_PERSON_SP    
 );
 
-
+**/
 
 procedure ADD_ORG_CAUSE_SP (
     p_org_id            IN  INTEGER,    -- NOT NULL
@@ -572,57 +570,9 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE('Error message: ' ||SQLERRM);
     ROLLBACK;  
 END;
-/*
-CREATE_COMMITMENT_PP.  Allow a member to sign up for a volunteer opportunity.  
-Given a member email, an opportunity id, a commitment start date and a commitment 
-end date (both optional), create a new record in the VM_COMMITMENT table.  If 
-the member has already committed to this opportunity, then either (a) create a new 
-commitment (if the new window between the start and end dates does not overlap
-the existing commitment); or (b) update the dates of the existing commitment so that 
-the new window is the union of the new and old windows.   For example, if the member
-has already committed to an opportunity between 15-MAR-2019 and 18-MAR-2019 and then
-commits again for 17-MAR-2019 to 20-MAR-2019, then update the existing commitment
-so that the commitment is for 15-MAR-2019 to 20-MAR-2019.  If the current start 
-or end dates are NULL, then they should be updated with the new start and end dates.
 
-The procedure should also check that the start and end dates provided are within
-the start and end dates of the opportunity.  If the opportunity has NULL values for 
-the start and end dates, then any commitment dates are valid.
 
-The new commitment status should be set to "inquiry".
 
-If a new commitment is created, the commitment_id value should be returned using 
-the p_commitment_id output parameter.  If an existing commitment is found and updated,
-the p_commitment_id value should be set to the commitment id of this commitment. 
-Otherwise, p_commitment_id should be set to NULL.
-
-PARAMETERS:  Described below
-RETURNS:  a new or existing commitment_id, using the p_commitment_id output parameter
-ERROR MESSAGES:
-  Error text:  "Missing mandatory value for parameter (x).  No Commitment added." 
-  Error meaning: A mandatory value is missing.  Here, y = 'CREATE_COMMITMENT_PP'
-  Error effect: Because a mandatory value is not provided, no data are 
-    inserted into the VM_COMMITMENT table.  The p_commitment_id value returned is 
-    NULL.
-
-  Error text:  "Member (x) not found.  No commitment added."
-  Error meaning: A member with the given email address was not found in the 
-    VM_MEMBER and VM_PERSON tables.  
-  Error effect:  Because there is no member for this commitment, no row is added
-    to the VM_COMMITMENT table.  The p_commitment_id parameter returns a NULL value.
-
-  Error text:  "Missing opportunity.  No commitment added."
-  Error meaning: A opportunity with the given id was not found in the 
-    VM_OPPORTUNITY tables.  
-  Error effect:  Because there is no opportunity for this commitment, no row is added
-    to the VM_COMMITMENT table.  The p_commitment_id parameter returns a NULL value.  
-
-  Error text:  "Opportunity is inactive."
-  Error meaning:  The commitment dates lie outside of the start and end date window 
-    of the opportunity.
-  Error effect:  No row is added to the VM)COMMITMENT table.  The p_commitment_id 
-    parameter returns a NULL value.
-*/
 procedure CREATE_COMMITMENT_PP (
     p_commitment_id     OUT INTEGER,    -- Output parameter
     p_member_email      IN  VARCHAR,    -- Not NULL
@@ -1039,6 +989,7 @@ ERROR MESSAGES:
 
 
 */
+
 function GET_MEMBER_HOURS_PF (
     p_member_email      IN VARCHAR,         -- Must not be NULL.
     p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
@@ -1344,4 +1295,4 @@ END;
 
 
 
-end volunteer3b_pkg;
+END VOLUNTEER3B_PKG;
