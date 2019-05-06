@@ -116,7 +116,7 @@ DATAFILE '/u01/app/oracle/oradata/WOLCOTTDB/indxg8' SIZE 1M AUTOEXTEND ON;
 SELECT * FROM USER_INDEXES;
 
 -- After moving the tables into the tablespaces we created, all the indexes have the status unusable. The ID's had been changed
-after moving the tables and ahd to be rebuilt, like we did above.
+after moving the tables and had to be rebuilt, like we did above.
 After rebuilding the indexes into a seperate tablespace they are all valid.
 
 
