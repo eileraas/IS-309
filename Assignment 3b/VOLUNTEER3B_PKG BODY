@@ -308,12 +308,12 @@ EXCEPTION
     ROLLBACK;
 END CREATE_MEMBER_PP;
 
-/**
-procedure CREATE_ORGANIZATION_PP (
+
+procedure CREATE_ORGANIZATION_SP (
     p_org_id                    OUT INTEGER,    -- output parameter
     p_org_name                  IN VARCHAR,     -- NOT NULL
     p_org_mission               IN VARCHAR,     -- NOT NULL
-    p_org_descrip               IN LONG,            
+    p_org_descrip               IN LONG,        -- NOT NULL
     p_org_phone                 IN VARCHAR,     -- NOT NULL
     p_org_type                  IN VARCHAR,     -- must conform to domain, if it has a value
     p_org_creation_date         IN DATE,            -- IF NULL, use SYSDATE
@@ -332,34 +332,172 @@ procedure CREATE_ORGANIZATION_PP (
     P_person_given_name         IN VARCHAR,  -- passed to CREATE_PERSON_SP
     p_person_surname            IN VARCHAR,  -- passed to CREATE_PERSON_SP
     p_person_phone              IN VARCHAR   -- passed to CREATE_PERSON_SP
-);
-procedure CREATE_OPPORTUNITY_PP (
+)
+IS
+ex_missingPar EXCEPTION;
+ex_invalidContact   EXCEPTION;
+ex_invalidLocation  EXCEPTION;
+lv_currentdate date;
+lv_missingPar VARCHAR(200);
+BEGIN
+
+
+IF p_org_creation_date IS NULL THEN
+    SELECT SYSDATE into lv_currentdate from dual;
+ELSE
+    lv_currentdate := p_org_creation_date;
+END IF;
+
+
+lv_missingPar := '';
+IF p_org_name IS NULL OR p_org_mission IS NULL OR p_org_descrip IS NULL OR p_org_phone IS NULL THEN
+    IF p_org_name IS NULL THEN
+        lv_missingPar := lv_missingPar || ' p_org_name';
+    END IF;
+    IF p_org_mission IS NULL THEN
+        lv_missingPar := lv_missingPar || ' p_org_mission';
+    END IF;
+    IF p_org_descrip IS NULL THEN
+        lv_missingPar := lv_missingPar || ' p_org_descrip';
+    END IF;
+    IF p_org_phone IS NULL THEN
+        lv_missingPar := lv_missingPar || ' p_org_phone';
+    END IF;
+    RAISE ex_missingPar;
+END IF;
+
+
+EXCEPTION
+WHEN ex_missingPar THEN
+    DBMS_OUTPUT.PUT_LINE('Missing mandatory value for parameter'|| lv_missingPar ||' in context CREATE_ORGANIZATION_SP. No organization created.');
+WHEN ex_invalidContact THEN
+    DBMS_OUTPUT.PUT_LINE('Invalid point of contact');
+    ROLLBACK;
+WHEN ex_invalidLocation THEN
+    DBMS_OUTPUT.PUT_LINE('Invalid location');
+    ROLLBACK;
+WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE(SQLCODE ||' '|| SQLERRM);
+                 DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
+    ROLLBACK;
+END;
+
+procedure CREATE_OPPORTUNITY_SP (
     p_opp_id                    OUT INTEGER,        -- output parameter
     p_org_id                    IN  INTEGER,        -- NOT NULL
     p_opp_title                 IN  VARCHAR,   -- NOT NULL
-    p_opp_description           IN  LONG,       
+    p_opp_description           IN  LONG,       -- NOT NULL
     p_opp_create_date           IN  DATE,       -- If NULL, use SYSDATE
     p_opp_max_volunteers        IN  INTEGER,    -- If provided, must be > 0
     p_opp_min_volunteer_age     IN  INTEGER,    -- If provided, must be between 0 and 125
     p_opp_start_date            IN  DATE,
-    p_opp_start_time            IN  CHAR,       
+    p_opp_start_time            IN  CHAR,
     p_opp_end_date              IN  DATE,
     p_opp_end_time              IN  CHAR,
     p_opp_status                IN  VARCHAR,    -- If provided, must conform to domain
     p_opp_great_for             IN  VARCHAR,    -- If provided, must conform to domain
+    p_location_id               OUT INTEGER,
     p_location_country	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
     p_location_postal_code      IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
     p_location_street1	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
     p_location_street2	        IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
     p_location_city	            IN	VARCHAR,  -- passed to CREATE_LOCATION_SP
     p_location_administrative_region IN VARCHAR,  -- passed to CREATE_LOCATION_SP
+    p_person_id                 OUT INTEGER,
     p_person_email              IN VARCHAR,   -- passed to CREATE_PERSON_SP
     P_person_given_name         IN VARCHAR,   -- passed to CREATE_PERSON_SP
     p_person_surname            IN VARCHAR,   -- passed to CREATE_PERSON_SP
-    p_person_phone              IN VARCHAR    -- passed to CREATE_PERSON_SP    
-);
+    p_person_phone              IN VARCHAR    -- passed to CREATE_PERSON_SP
+)
+IS
+    ex_OrgID EXCEPTION;
+    ex_orgnoexists EXCEPTION;
+    ex_OrgTitle EXCEPTION;
+    ex_OrgDescription EXCEPTION;
+    ex_MaxVol EXCEPTION;
+    ex_outofAge EXCEPTION;
+    org_exists number := 0;
+    opp_createDate DATE := p_opp_create_date;
 
-**/
+BEGIN
+
+    IF p_org_ID IS NULL THEN
+        RAISE ex_OrgID;
+    ELSIF p_opp_title IS NULL THEN
+        RAISE ex_OrgTitle;
+    ELSIF p_opp_description IS NULL THEN
+        RAISE ex_OrgDescription;
+    END IF;
+
+    SELECT count(*) into org_exists from vm_organization where ORGANIZATION_ID = p_org_id;
+    IF org_exists < 0 THEN
+        RAISE ex_orgnoexists;
+    END IF;
+
+    IF opp_createDate IS NULL THEN
+        SELECT SYSDATE
+        INTO opp_createDate
+        FROM dual;
+    ELSIF p_opp_max_volunteers IS NOT NULL AND p_opp_max_volunteers < 1 THEN
+        RAISE ex_MaxVol;
+    ELSIF p_opp_min_volunteer_age IS NOT NULL AND p_opp_min_volunteer_age < 0 OR p_opp_min_volunteer_age > 125 THEN
+        RAISE ex_outofAge;
+    END IF;
+
+    create_person_sp 
+    (p_person_ID,
+    p_person_email,
+    p_person_given_name,
+    p_person_surname,
+    p_person_phone);
+    
+    create_location_sp
+    (p_location_id,
+    p_location_country,
+    p_location_postal_code,
+    p_location_street1,
+    p_location_street2,
+    p_location_city,
+    p_location_administrative_region);
+
+    p_opp_id := vm_opportunity_seq.nextval;
+    INSERT INTO vm_opportunity
+    VALUES(p_opp_id, 
+    p_opp_title, 
+    p_opp_description, 
+    opp_createDate, 
+    p_opp_max_volunteers,
+    p_opp_min_volunteer_age,
+    p_opp_start_date, 
+    p_opp_start_time,
+    p_opp_end_date,
+    p_opp_end_time, 
+    p_opp_status, 
+    p_opp_great_for,
+    p_location_id,
+    p_org_id,
+    p_person_ID);
+
+EXCEPTION
+    WHEN ex_OrgID THEN
+        DBMS_OUTPUT.PUT_LINE('Missing mandatory value for OrgID. No Opportunity added.');
+    WHEN ex_OrgTitle THEN
+        DBMS_OUTPUT.PUT_LINE('Missing mandatory value for OrgTitle. No Opportunity added.');
+    WHEN ex_OrgDescription THEN
+        DBMS_OUTPUT.PUT_LINE('Missing mandatory value for OrgTitle. No Opportunity added.');
+    WHEN ex_orgnoexists THEN
+        DBMS_OUTPUT.PUT_LINE('Organization with ID .' || p_org_id || ' does not exists. No opportunity added.');
+    WHEN ex_MaxVol THEN
+        DBMS_OUTPUT.PUT_LINE('Max Volunteer value must be above 0. No Opportunity added.');
+    When ex_outofAge THEN
+        DBMS_OUTPUT.PUT_LINE('Min Volunteer age value must be between 0 and 125. No Opportunity added.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE(SQLCODE ||' '|| SQLERRM);
+        DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
+        ROLLBACK;
+    
+END;
+
 
 procedure ADD_ORG_CAUSE_SP (
     p_org_id            IN  INTEGER,    -- NOT NULL
