@@ -106,9 +106,9 @@ default tablespace USERS
 quota 50M ON Users 
 temporary tablespace temp
 profile privileges_profile;
-grant VolunteerMatch_administrative to Bra_1;
+grant VolunteerMatch_administrative to Bra_2;
 
-grant create session to Bra_1;
+grant create session to Bra_2;
 
 
 
