@@ -1,0 +1,111 @@
+create or replace function GET_MEMBER_HOURS_PF_13 (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER
+is
+ res number;
+ i number :=0;
+ ex_isnull exception;
+ ex_not_found exception;
+ ex_o_not_found exception;
+ ex_date exception;
+ daily_workhour number;
+begin
+    IF p_member_email is NULL then
+    RAISE ex_isnull;
+    END IF;
+
+    IF p_opportunity_ID is NULL THEN
+    RAISE ex_isnull;
+    END IF;
+
+    select count(*) into i from vm_opportunity where OPPORTUNITY_ID=p_opportunity_ID;
+    if i=0 then 
+     raise ex_o_not_found;
+     end if;
+
+    select count(*) into i from vm_person where person_email=p_member_email;
+    if i=0 then 
+     raise ex_not_found;
+     end if;
+
+    if p_start_date>p_end_date then
+        raise ex_date;
+   end if;
+
+
+
+
+    select 
+    case when (p_end_date is NULL AND p_start_date is NULL) then
+    round(
+    (O.opportunity_end_date - O.opportunity_start_date) * 
+    (To_date(O.opportunity_end_time, 'hh24:mi') -  To_date(O.opportunity_start_time, 'hh24:mi')) * 24
+    ) 
+    else
+    round(
+    ( greatest(LEAST(O.opportunity_end_date, p_end_date), O.opportunity_start_date) - least(GREATEST(O.opportunity_start_date, p_start_date),O.opportunity_end_date) ) * 
+    (To_date(O.opportunity_end_time, 'hh24:mi') -  To_date(O.opportunity_start_time, 'hh24:mi')) * 24
+    ) 
+    end
+    into res 
+    from vm_opportunity O,vm_person P
+    where O.person_id=P.person_id
+    and P.person_email=p_member_email
+    and O.opportunity_ID=p_opportunity_ID;
+
+    return res;  
+
+EXCEPTION
+  WHEN ex_isnull THEN
+     DBMS_OUTPUT.PUT_LINE( ' Error text:"Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." ');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory parameter is NULL');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect: NULL value returned. ');
+     return NULL;
+  when   ex_not_found  then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:Member(email address) not found');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: The member with the given email address cannot be found in the system. ');  
+     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
+    return NULL;
+  when   ex_o_not_found  then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:Opportunity (x) not found.');
+     DBMS_OUTPUT.PUT_LINE('Error meaning: The opportunity with the given id value cannot be found in the system.  ');  
+     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
+    return NULL;
+  when   ex_date then
+      DBMS_OUTPUT.PUT_LINE( ' Error text:End date (x) must be later than the start date (y)');
+     DBMS_OUTPUT.PUT_LINE('Error meaning:The start date of the range of dates can not be after the end date. ');  
+     DBMS_OUTPUT.PUT_LINE('  Error effect:NULL value returned. ');
+    return NULL;
+
+
+/*
+ERROR MESSAGES: 
+  Error text:  "Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." 
+           x = a mandatory parameter that is NULL
+  Error meaning: A mandatory parameter is NULL.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Member (x) not found."  
+           x = email address
+  Error meaning: The member with the given email address cannot be found in the system.  
+  Error effect:  NULL value returned.  
+
+  Error text:  "Opportunity (x) not found."
+           x = opportunity id
+  Error meaning: The opportunity with the given id value cannot be found in the system.  
+  Error effect:  NULL value returned.
+
+  Error text:  "End date (x) must be later than the start date (y)"
+           x = the end date
+           y = the start date
+  Error meaning:  The start date of the range of dates can't be after the end date.
+  Error effect:  NULL value returned.
+
+
+*/
+
+
+end;
