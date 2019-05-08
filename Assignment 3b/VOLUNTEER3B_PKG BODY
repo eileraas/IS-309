@@ -1,7 +1,6 @@
 create or replace PACKAGE BODY VOLUNTEER3B_PKG 
 IS
-
- procedure CREATE_LOCATION_PP ( 
+procedure CREATE_LOCATION_PP (
   p_location_id		    OUT	INTEGER,        -- an output parameter
   p_location_country	IN	VARCHAR,        -- must not be NULL
   p_location_postal_code IN	VARCHAR,        -- must not be NULL
@@ -10,7 +9,9 @@ IS
   p_location_city	    IN	VARCHAR,
   p_location_administrative_region IN VARCHAR
 )
+
 IS
+
 location_postal_code_check NUMBER;
 location_country_check NUMBER;
 location_street1_check NUMBER;
@@ -30,7 +31,7 @@ FROM VM_LOCATION
 WHERE p_location_country = LOCATION_COUNTRY;
 
 SELECT COUNT (*)
-INTO location_street1_check 
+INTO location_street1_check
 FROM VM_LOCATION
 WHERE p_location_street1 = LOCATION_STREET_1;
 
@@ -90,11 +91,10 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
     ROLLBACK;
-END CREATE_LOCATION_PP;
+    
+  END CREATE_LOCATION_PP;
 
-
-
-procedure CREATE_PERSON_PP (
+  procedure CREATE_PERSON_PP (
     p_person_ID             OUT INTEGER, -- an output parameter
     p_person_email          IN VARCHAR,  -- Must be unique, not null
     P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
@@ -166,10 +166,9 @@ END IF;
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
     ROLLBACK;  
-    
-    END CREATE_PERSON_PP;
+  END CREATE_PERSON_PP;
 
-procedure CREATE_MEMBER_PP (
+  procedure CREATE_MEMBER_PP (
     p_person_ID             OUT INTEGER,     -- an output parameter
     p_person_email          IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
     P_person_given_name     IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
@@ -306,10 +305,10 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLERRM);
     ROLLBACK;
-END CREATE_MEMBER_PP;
+    
+  END CREATE_MEMBER_PP;
 
-
-procedure CREATE_ORGANIZATION_SP (
+  procedure CREATE_ORGANIZATION_PP (
     p_org_id                    OUT INTEGER,    -- output parameter
     p_org_name                  IN VARCHAR,     -- NOT NULL
     p_org_mission               IN VARCHAR,     -- NOT NULL
@@ -379,9 +378,11 @@ WHEN ex_invalidLocation THEN
 WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE(SQLCODE ||' '|| SQLERRM);
                  DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
     ROLLBACK;
-END;
+    
+  END CREATE_ORGANIZATION_PP;
 
-procedure CREATE_OPPORTUNITY_SP (
+
+  procedure CREATE_OPPORTUNITY_PP (
     p_opp_id                    OUT INTEGER,        -- output parameter
     p_org_id                    IN  INTEGER,        -- NOT NULL
     p_opp_title                 IN  VARCHAR,   -- NOT NULL
@@ -443,14 +444,14 @@ BEGIN
         RAISE ex_outofAge;
     END IF;
 
-    create_person_sp 
+    create_person_pp 
     (p_person_ID,
     p_person_email,
     p_person_given_name,
     p_person_surname,
     p_person_phone);
     
-    create_location_sp
+    create_location_pp
     (p_location_id,
     p_location_country,
     p_location_postal_code,
@@ -495,11 +496,11 @@ EXCEPTION
         DBMS_OUTPUT.PUT_LINE(SQLCODE ||' '|| SQLERRM);
         DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
         ROLLBACK;
-    
-END;
+        
+  END CREATE_OPPORTUNITY_PP;
 
 
-procedure ADD_ORG_CAUSE_SP (
+  procedure ADD_ORG_CAUSE_PP (
     p_org_id            IN  INTEGER,    -- NOT NULL
     p_cause_name        IN  VARCHAR -- NOT NULL
 )
@@ -547,10 +548,11 @@ COMMIT;
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
     ROLLBACK;
-END;
+    
+  END ADD_ORG_CAUSE_PP;
 
 
-procedure ADD_MEMBER_CAUSE_SP (
+  procedure ADD_MEMBER_CAUSE_PP (
     p_person_id     IN  INTEGER,    -- NOT NULL
     p_cause_name    IN  VARCHAR     -- NOT NULL
 )
@@ -600,10 +602,11 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE('Error message: ' ||SQLERRM);
     ROLLBACK;  
-END;
+    
+  END ADD_MEMBER_CAUSE_PP;
 
 
-procedure ADD_OPP_SKILL_SP (
+  procedure ADD_OPP_SKILL_PP (
     p_skill_name    IN  VARCHAR,    -- NOT NULL
     p_opp_id        IN  INTEGER    -- NOT NULL
 )
@@ -655,10 +658,11 @@ COMMIT;
     DBMS_OUTPUT.PUT_LINE ('THE ERROR CODE IS ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE ('THE ERROR msg IS ' || SQLCODE);
     ROLLBACK;
-END;
+    
+  END ADD_OPP_SKILL_PP;
 
 
-procedure ADD_MEMBER_SKILL_SP (
+  procedure ADD_MEMBER_SKILL_PP (
     p_person_id     IN  INTEGER,
     p_skill_name    IN  VARCHAR 
 )
@@ -706,12 +710,12 @@ EXCEPTION
     DBMS_OUTPUT.PUT_LINE('An error occured. ');
     DBMS_OUTPUT.PUT_LINE('The error number:  ' || SQLCODE);
     DBMS_OUTPUT.PUT_LINE('Error message: ' ||SQLERRM);
-    ROLLBACK;  
-END;
+    ROLLBACK; 
+    
+  END ADD_MEMBER_SKILL_PP;
 
 
-
-procedure CREATE_COMMITMENT_PP (
+  procedure CREATE_COMMITMENT_PP (
     p_commitment_id     OUT INTEGER,    -- Output parameter
     p_member_email      IN  VARCHAR,    -- Not NULL
     p_opportunity_id    IN  VARCHAR,    -- Not NULL
@@ -829,47 +833,10 @@ Exception
     dbms_output.put_line(' the error msg is: ' || sqlerrm);
     rollback;
 
+  END CREATE_COMMITMENT_PP;
 
-END CREATE_COMMITMENT_PP;				 
-				
 
-/*
-RECORD_HOURS_PP.  Record the hours worked by a member on a particular 
-opportunity on a particular day.  Given a member email, an opportunity id, and 
-a date, create a new record in the VM_TIMETABLE table.  Only one record can be 
-made on a given day for a given member and opportunity.
-
-The TIMESHEET_CREATION_DATE is to be set to the current date (use Oracle's CURRENT_DATE function).
-
-The TIMESHEET_STATUS value is to be set to 'pending'.
-
-PARAMETERS:     Described below
-RETURNS:        Nothing
-ERROR MESSAGES: 
-  Error text:  "Invalid number of hours for opportunity x. Must be
-                a number between 1 and 24 hours. " 
-  Error meaning: The number of ours violates the domain definition, or is missing
-  Error effect: Because the number of hours is invalid, no timesheet record is
-        created.
-
-  Error text:  "Member (x) not found.  No hours added."
-  Error meaning: A member with the given email address was not found in the 
-    VM_MEMBER and VM_PERSON tables.  
-  Error effect:  Because there is no member for this timesheet entry, no row is added
-    to the VM_TIMESHEET table.  
-
-  Error text:  "Missing opportunity.  No commitment added."
-  Error meaning: A opportunity with the given id was not found in the 
-    VM_OPPORTUNITY tables.  
-  Error effect:  Because there is no opportunity for this timesheet entry, no row is added
-    to the VM_TIMESHEET table.  
-
-  Error text: "Missing work date for opportunity x."
-  Error meaning:  The date provided for the opportunity is invalid or missing.
-
-*/
-
-procedure RECORD_HOURS_PP (
+  procedure RECORD_HOURS_PP (
     p_member_email      IN  VARCHAR,    -- Not NULL
     p_opportunity_id    IN  VARCHAR,    -- NOT NULL
     p_hours             IN  NUMBER,     -- NOT NULL
@@ -951,50 +918,10 @@ Exception
     dbms_output.put_line(' the error msg is: ' || sqlerrm);
     rollback;
 
-END RECORD_HOURS_PP;
+  END RECORD_HOURS_PP;
 
-/*
-APPROVE_HOURS_PP.  Given a member email, an opportunity id, a volunteer date 
-(optional), an approver email, and an approval status value, update the status 
-and approver id of the existing record in VM_TIMESHEET.  If the date is NULL, 
-update all records for this member and opportunity.  
 
-PARAMETERS:     Described below
-RETURNS:        Nothing
-ERROR MESSAGES: 
-  Error text:  "Missing mandatory value for parameter (x) in APPROVE_HOURS_PP." 
-           x = a mandatory parameter that is NULL
-  Error meaning: A mandatory parameter is NULL.  
-  Error effect:  No changes are made to the VM_TIMESHEET table.  
-
-  Error text:  "Member (x) not found."  
-           x = email address
-  Error meaning: The member with the given email address cannot be found in the system.  
-  Error effect:  No changes are made to the VM_TIMESHEET table.  
-
-  Error text:  "Approver (x) not found."  
-           x = email address
-  Error meaning: The member with the given email address cannot be found in the system.  
-  Error effect:  No changes are made to the VM_TIMESHEET table.  
-
-  Error text:  "Opportunity (x) not found."
-           x = opportunity id
-  Error meaning: The opportunity with the given id value cannot be found in the system.  
-  Error effect:  No changes are made to the VM_TIMESHEET table.  
-
-  Error text:  "Invalid value "x" for approval status."
-           x = approval status
-  Error meaning: The value for approval status is not included in the domain ("approved", "not approved", "pending").  
-  Error effect:  No changes are made to the VM_TIMESHEET table.  
-
-  Error text:  "Member x has no recorded hours on opportunity y on z."  
-           x = member id; y = opportunity id; z = volunteer date
-  Error meaning: There is no row in VM_TIMESHEET with this combination of member, opportunity, and volunteer date.  
-  Error effect:  No changes are made to the VM_TIMESHEET table.  
-
-*/
-
-procedure APPROVE_HOURS_PP (
+  procedure APPROVE_HOURS_PP (
     p_member_email      IN VARCHAR,    -- Must not be NULL.
     p_approver_email    IN VARCHAR,    -- Must not be NULL.  Approver is a member.
     p_opportunity_id    IN VARCHAR,    -- Must not be NULL.
@@ -1094,144 +1021,10 @@ EXCEPTION
     dbms_output.put_line(' the error msg is: ' || sqlerrm);
     rollback;
     
-END APPROVE_HOURS_PP;
-
-/*
-GET_MEMBER_HOURS_PF. Given a member email address, an opportunity ID, a start 
-date and an end date, calculate the number of hours worked.  The start date and
-end date can be NULL.  If both are NULL, then calculate the hours worked on this
-opportunity for all dates.
-PARAMETERS:     Described below
-RETURNS:        Calculated hours, or NULL
-ERROR MESSAGES: 
-  Error text:  "Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." 
-           x = a mandatory parameter that is NULL
-  Error meaning: A mandatory parameter is NULL.  
-  Error effect:  NULL value returned.  
-
-  Error text:  "Member (x) not found."  
-           x = email address
-  Error meaning: The member with the given email address cannot be found in the system.  
-  Error effect:  NULL value returned.  
-
-  Error text:  "Opportunity (x) not found."
-           x = opportunity id
-  Error meaning: The opportunity with the given id value cannot be found in the system.  
-  Error effect:  NULL value returned.
-
-  Error text:  "End date (x) must be later than the start date (y)"
-           x = the end date
-           y = the start date
-  Error meaning:  The start date of the range of dates can't be after the end date.
-  Error effect:  NULL value returned.
+  END APPROVE_HOURS_PP;
 
 
-*/
-
-function GET_MEMBER_HOURS_PF (
-    p_member_email      IN VARCHAR,         -- Must not be NULL.
-    p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
-    p_start_date        IN DATE,
-    p_end_date          IN DATE
-) RETURN NUMBER
-
-is
- res number;
- i number :=0;
- ex_WrongDate exception;
- ex_isnull exception;
- ex_not_found exception;
- ex_o_not_found exception;
- ex_date exception;
- daily_workhour number;
- p_workedHours VM_TIMESHEET.TIMESHEET_VOLUNTEER_HOURS%type;
- 
-begin
-    IF p_member_email is NULL then
-    RAISE ex_isnull;
-    END IF;
-
-if p_start_date is not null or p_end_date is not null then
-        if p_start_date is not null and p_end_date is not null then
-            if p_start_date > p_end_date then
-                raise ex_WrongDate;
-            end if;
-            Select SUM(TIMESHEET_VOLUNTEER_HOURS) into p_workedHours from VM_TIMESHEET where person_id in 
-            (select person_id from vm_person where person_email = p_member_email) 
-            and opportunity_id = p_opportunity_ID
-            and timesheet_volunteer_date >= p_start_date 
-            and timesheet_volunteer_date <= p_end_date;
-            return p_workedHours;
-        elsif p_start_date is not null THEN 
-            Select SUM(TIMESHEET_VOLUNTEER_HOURS) into p_workedHours from VM_TIMESHEET where person_id in 
-            (select person_id from vm_person where person_email = p_member_email) 
-            and opportunity_id = p_opportunity_ID 
-            and timesheet_volunteer_date >= p_start_date;
-            return p_workedHours;
-        elsif p_end_date is not null THEN
-            Select SUM(TIMESHEET_VOLUNTEER_HOURS) into p_workedHours from VM_TIMESHEET where person_id in 
-            (select person_id from vm_person where person_email = p_member_email) 
-            and opportunity_id = p_opportunity_ID 
-            and timesheet_volunteer_date <= p_end_date;
-            return p_workedHours;
-        end if;
-    end if;
-    
-    
-    EXCEPTION
-  WHEN ex_isnull THEN
-     DBMS_OUTPUT.PUT_LINE( ' Error text:"Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." ');
-     DBMS_OUTPUT.PUT_LINE('Error meaning: A mandatory parameter is NULL');  
-     DBMS_OUTPUT.PUT_LINE('  Error effect: NULL value returned. ');
-     return NULL;
-  when   ex_not_found  then
-      DBMS_OUTPUT.PUT_LINE( ' Error text:Member(email address) not found');
-     DBMS_OUTPUT.PUT_LINE('Error meaning: The member with the given email address cannot be found in the system. ');  
-     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
-    return NULL;
-  when   ex_o_not_found  then
-      DBMS_OUTPUT.PUT_LINE( ' Error text:Opportunity (x) not found.');
-     DBMS_OUTPUT.PUT_LINE('Error meaning: The opportunity with the given id value cannot be found in the system.  ');  
-     DBMS_OUTPUT.PUT_LINE(' Error effect: NULL value returned. ');
-    return NULL;
-  when   ex_date then
-      DBMS_OUTPUT.PUT_LINE( ' Error text:End date (x) must be later than the start date (y)');
-     DBMS_OUTPUT.PUT_LINE('Error meaning:The start date of the range of dates can not be after the end date. ');  
-     DBMS_OUTPUT.PUT_LINE('  Error effect:NULL value returned. ');
-    return NULL;
-    end;
-
-/*
-GET_MEMBER_HOURS_PF. Same name as the function above, but with different parameters.  
-This is overloading.  Given a member email address, a start 
-date and an end date, calculate the number of hours worked by opportunity. The 
-function should display the opportunity title for each opportunity on which the 
-member has volunteered in the given time range and the hours worked for each 
-opportunity.  The start date and end date can be NULL.  If both are NULL, then 
-display all opportunities on which the member has worked at any time.   The 
-function returns the sum of all hours within the specified range.
-PARAMETERS:     Described below
-RETURNS:        total number of hours worked, or NULL
-ERROR MESSAGES: 
-  Error text:  "Missing mandatory value for parameter (x) in GET_MEMBER_HOURS_PF." 
-           x = a mandatory parameter that is NULL
-  Error meaning: A mandatory parameter is NULL.  
-  Error effect:  NULL value returned.  
-
-  Error text:  "Member (x) not found."  
-           x = email address
-  Error meaning: The member with the given email address cannot be found in the system.  
-  Error effect:  NULL value returned.  
-
-  Error text:  "End date (x) must be later than the start date (y)"
-           x = the end date
-           y = the start date
-  Error meaning:  The start date of the range of dates can't be after the end date.
-  Error effect:  NULL value returned.
-
-
-*/
-function GET_MEMBER_HOURS_PF_13 (
+  function GET_MEMBER_HOURS_PF (
     p_member_email      IN VARCHAR,         -- Must not be NULL.
     p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
     p_start_date        IN DATE,
@@ -1267,6 +1060,9 @@ begin
     if p_start_date>p_end_date then
         raise ex_date;
    end if;
+
+
+
 
     select 
     case when (p_end_date is NULL AND p_start_date is NULL) then
@@ -1309,12 +1105,9 @@ EXCEPTION
      DBMS_OUTPUT.PUT_LINE('Error meaning:The start date of the range of dates can not be after the end date. ');  
      DBMS_OUTPUT.PUT_LINE('  Error effect:NULL value returned. ');
     return NULL;
-    
-    end;
+  END GET_MEMBER_HOURS_PF;
 
-
-
-function GET_MEMBER_HOURS_PF_14 (
+  function GET_MEMBER_HOURS_PF (
     p_member_email      IN VARCHAR,         -- Must not be NULL.
     p_start_date        IN DATE,
     p_end_date          IN DATE
@@ -1339,6 +1132,8 @@ begin
     if p_start_date>p_end_date then
         raise ex_date;
    end if;
+
+
 
     select
     sum(case when (p_end_date is NULL AND p_start_date is NULL) then
@@ -1375,35 +1170,9 @@ EXCEPTION
      DBMS_OUTPUT.PUT_LINE('Error meaning:The start date of the range of dates can not be after the end date. ');  
      DBMS_OUTPUT.PUT_LINE('  Error effect:NULL value returned. ');
     return NULL;
+  END GET_MEMBER_HOURS_PF;
 
-end;
-
-
-
-/* 
-SEARCH_OPPORTUNITIES_PP.  Given a member email, list all opportunities that 
-match one or more of that member�s causes or skills.  Rank the results according 
-to how good the fit is.  For example, if an opportunity matches two causes and 
-two skills, it is ranked higher than an opportunity that matches one cause and 
-two skills.
-
-PARAMETERS:     Described below
-RETURNS:        nothing
-ERROR MESSAGES: 
-  Error text:  "Missing mandatory value for parameter (x) in GET_SEARCH_OPPORTUNITIES_PP." 
-           x = a mandatory parameter that is NULL
-  Error meaning: A mandatory parameter is NULL.  
-  Error effect:  No results 
-
-  Error text:  "Member (x) not found."  
-           x = email address
-  Error meaning: The member with the given email address cannot be found in the system.  
-  Error effect:  No results.  
-
-
-*/
-
-procedure SEARCH_OPPORTUNITIES_PP (
+  procedure SEARCH_OPPORTUNITIES_PP (
     p_member_email      IN VARCHAR      -- Must not be NULL
 )
 IS
@@ -1428,9 +1197,7 @@ group by OPPORTUNITY_ID order by count(*) desc;
     FETCH c INTO v_emp_id, ranking;
     DBMS_OUTPUT.PUT_LINE(v_emp_id );
   end loop;
-END;
-
-
-
+  
+  END SEARCH_OPPORTUNITIES_PP;
 
 END VOLUNTEER3B_PKG;
