@@ -1,6 +1,6 @@
 create or replace package volunteer3b_pkg
 IS
- procedure CREATE_LOCATION_PP ( 
+procedure CREATE_LOCATION_PP (
   p_location_id		    OUT	INTEGER,        -- an output parameter
   p_location_country	IN	VARCHAR,        -- must not be NULL
   p_location_postal_code IN	VARCHAR,        -- must not be NULL
@@ -9,16 +9,14 @@ IS
   p_location_city	    IN	VARCHAR,
   p_location_administrative_region IN VARCHAR
 );
-
 procedure CREATE_PERSON_PP (
-    p_person_ID             OUT INTEGER, -- an output parameter
+    p_person_ID             OUT INTEGER,     -- an output parameter
     p_person_email          IN VARCHAR,  -- Must be unique, not null
     P_person_given_name     IN VARCHAR,  -- NOT NULL, if email is unique (new)
     p_person_surname        IN VARCHAR,  -- NOT NULL, if email is unique (new)
     p_person_phone          IN VARCHAR
 );
-
-procedure CREATE_MEMBER_PP (
+  procedure CREATE_MEMBER_PP (
     p_person_ID             OUT INTEGER,     -- an output parameter
     p_person_email          IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
     P_person_given_name     IN  VARCHAR,  -- passed through to CREATE_PERSON_SP
@@ -33,13 +31,11 @@ procedure CREATE_MEMBER_PP (
     p_location_administrative_region IN VARCHAR, -- passed through to CREATE_LOCATION_SP
     p_member_password       IN  VARCHAR   -- NOT NULL 
 );
-
-
-procedure CREATE_ORGANIZATION_SP (
+procedure CREATE_ORGANIZATION_PP (
     p_org_id                    OUT INTEGER,    -- output parameter
     p_org_name                  IN VARCHAR,     -- NOT NULL
     p_org_mission               IN VARCHAR,     -- NOT NULL
-    p_org_descrip               IN LONG,        -- NOT NULL
+    p_org_descrip               IN LONG,            
     p_org_phone                 IN VARCHAR,     -- NOT NULL
     p_org_type                  IN VARCHAR,     -- must conform to domain, if it has a value
     p_org_creation_date         IN DATE,            -- IF NULL, use SYSDATE
@@ -59,8 +55,7 @@ procedure CREATE_ORGANIZATION_SP (
     p_person_surname            IN VARCHAR,  -- passed to CREATE_PERSON_SP
     p_person_phone              IN VARCHAR   -- passed to CREATE_PERSON_SP
 );
-
-procedure CREATE_OPPORTUNITY_SP (
+  procedure CREATE_OPPORTUNITY_PP (
     p_opp_id                    OUT INTEGER,        -- output parameter
     p_org_id                    IN  INTEGER,        -- NOT NULL
     p_opp_title                 IN  VARCHAR,   -- NOT NULL
@@ -87,23 +82,21 @@ procedure CREATE_OPPORTUNITY_SP (
     p_person_surname            IN VARCHAR,   -- passed to CREATE_PERSON_SP
     p_person_phone              IN VARCHAR    -- passed to CREATE_PERSON_SP
 );
-
-
-procedure ADD_ORG_CAUSE_SP (
+procedure ADD_ORG_CAUSE_PP (
     p_org_id            IN  INTEGER,    -- NOT NULL
     p_cause_name        IN  VARCHAR -- NOT NULL
 );
-procedure ADD_MEMBER_CAUSE_SP (
+procedure ADD_MEMBER_CAUSE_PP (
     p_person_id     IN  INTEGER,    -- NOT NULL
     p_cause_name    IN  VARCHAR     -- NOT NULL
 );
-procedure ADD_OPP_SKILL_SP (
+procedure ADD_OPP_SKILL_PP (
     p_skill_name    IN  VARCHAR,    -- NOT NULL
     p_opp_id        IN  INTEGER    -- NOT NULL
 );
-procedure ADD_MEMBER_SKILL_SP (
-    p_person_id     IN  INTEGER,
-    p_skill_name    IN  VARCHAR 
+procedure ADD_MEMBER_SKILL_PP (
+    p_person_id     IN  INTEGER,    -- NOT NULL
+    p_skill_name    IN  VARCHAR -- NOT NULL
 );
 /*
 CREATE_COMMITMENT_PP.  Allow a member to sign up for a volunteer opportunity.  
@@ -294,19 +287,6 @@ function GET_MEMBER_HOURS_PF (
     p_end_date          IN DATE
 ) RETURN NUMBER;
 
-function GET_MEMBER_HOURS_PF_13 (
-    p_member_email      IN VARCHAR,         -- Must not be NULL.
-    p_opportunity_ID    IN INTEGER,         -- Must not be NULL.
-    p_start_date        IN DATE,
-    p_end_date          IN DATE
-) RETURN NUMBER;
-
-function GET_MEMBER_HOURS_PF_14 (
-    p_member_email      IN VARCHAR,         -- Must not be NULL.
-    p_start_date        IN DATE,
-    p_end_date          IN DATE
-) RETURN NUMBER;
-
 /*
 GET_MEMBER_HOURS_PF. Same name as the function above, but with different parameters.  
 This is overloading.  Given a member email address, a start 
@@ -337,6 +317,11 @@ ERROR MESSAGES:
 
 
 */
+function GET_MEMBER_HOURS_PF (
+    p_member_email      IN VARCHAR,         -- Must not be NULL.
+    p_start_date        IN DATE,
+    p_end_date          IN DATE
+) RETURN NUMBER;
 
 /* 
 SEARCH_OPPORTUNITIES_PP.  Given a member email, list all opportunities that 
